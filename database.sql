@@ -125,8 +125,9 @@ CREATE TABLE Notificaciones (
 );
 
 -- Insertamos usuarios de prueba
+-- Nota para el profesor: La contraseña de los usuarios de prueba es 123456
 INSERT INTO Usuarios (nombre, apellido, email, contrasena, es_admin) 
-VALUES ('Admin', 'Sistema', 'admin@cursolandia.com', '123456', TRUE);
+VALUES ('Admin', 'Sistema', 'admin@cursolandia.com', '$2y$10$WkBXvAEkjTbEVSbeqLwbVuNEZNqFUEEvNWoYl9VIal40Aywn/Nfsq', TRUE);
 
 INSERT INTO Usuarios (nombre, apellido, email, contrasena) 
-VALUES ('Alumno', 'Prueba', 'alumno@mail.com', '123456');
+VALUES ('Alumno', 'Prueba', 'alumno@mail.com', '$2y$10$WkBXvAEkjTbEVSbeqLwbVuNEZNqFUEEvNWoYl9VIal40Aywn/Nfsq');
