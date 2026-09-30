@@ -23,7 +23,7 @@ $cursos_inscritos = $conexion->query($sql_inscritos);
 // Buscamos los cursos que el usuario creó
 $sql_creados = "SELECT id_curso, titulo, cupo, fecha_inicio 
                 FROM Cursos 
-                WHERE id_creador = $id_usuario 
+                WHERE id_creador = $id_usuario AND activo = 1
                 ORDER BY fecha_inicio DESC";
 $cursos_creados = $conexion->query($sql_creados);
 ?>
@@ -118,8 +118,8 @@ $cursos_creados = $conexion->query($sql_creados);
                                     <small class="text-muted">Inicio: <?php echo date("d/m/Y", strtotime($creado['fecha_inicio'])); ?></small>
                                     <div>
                                         <!-- Botones listos para futuras funcionalidades -->
-                                        <button class="btn btn-sm btn-outline-secondary disabled" style="font-size: 0.75rem;">Editar</button>
-                                        <button class="btn btn-sm btn-outline-danger disabled" style="font-size: 0.75rem;">Borrar</button>
+                                        <a href="editar_curso.php?id=<?php echo $creado['id_curso']; ?>" class="btn btn-sm btn-outline-secondary fw-bold" style="font-size: 0.75rem;">Editar</a>
+                                        <a href="borrar_curso.php?id=<?php echo $creado['id_curso']; ?>" class="btn btn-sm btn-outline-danger fw-bold" style="font-size: 0.75rem;" onclick="return confirm('¿Estás seguro de que querés borrar este curso?');">Borrar</a>
                                     </div>
                                 </div>
                             </div>
