@@ -2,7 +2,6 @@
 session_start();
 require_once 'includes/conexion.php';
 
-// Verificamos que el usuario esté logueado y la petición sea válida
 if (!isset($_SESSION['id_usuario']) || $_SERVER['REQUEST_METHOD'] != 'POST') {
     header("Location: index.php");
     exit();
@@ -11,12 +10,24 @@ if (!isset($_SESSION['id_usuario']) || $_SERVER['REQUEST_METHOD'] != 'POST') {
 $id_usuario = (int)$_SESSION['id_usuario'];
 $id_curso = (int)$_POST['id_curso'];
 
-// Insertamos la inscripción en la base de datos.
-// Usamos INSERT IGNORE para que MySQL no tire error si por algún motivo intenta inscribirse dos veces
+// 1. Verificamos el cupo actual del curso
+$query_cupo = $conexion->query("SELECT cupo FROM Cursos WHERE id_curso = $id_curso");
+$curso_data = $query_cupo->fetch_assoc();
+
+// Si el cupo no es nulo (es decir, tiene límite) y es 0 o menos, rechazamos
+if ($curso_data['cupo'] !== null && $curso_data['cupo'] <= 0) {
+    header("Location: index.php?error=lleno");
+    exit();
+}
+
+// 2. Insertamos la inscripción
 $sql = "INSERT IGNORE INTO Inscripciones (id_curso, id_usuario, estado) VALUES ($id_curso, $id_usuario, 'Aceptado')";
 
 if ($conexion->query($sql)) {
-    // Lo devolvemos al index con una variable en la URL para mostrar el mensaje de éxito
+    // 3. Si la inscripción fue exitosa y el curso tiene límite, descontamos 1
+    if ($curso_data['cupo'] !== null) {
+        $conexion->query("UPDATE Cursos SET cupo = cupo - 1 WHERE id_curso = $id_curso");
+    }
     header("Location: index.php?exito=1");
 } else {
     header("Location: index.php");

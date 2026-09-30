@@ -4,7 +4,7 @@ session_start();
 
 // Si el usuario ya tiene sesión iniciada, lo mandamos directo a su panel
 if (isset($_SESSION['id_usuario'])) {
-    header("Location: panel.php");
+    header("Location: index.php");
     exit();
 }
 
@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $_SESSION['plan_pro'] = $usuario['plan_pro'];
             
             // Lo redirigimos a su panel principal (que crearemos en el próximo paso)
-            header("Location: panel.php");
+            header("Location: index.php");
             exit();
         } else {
             $mensaje = "<div class='alert alert-danger p-2 small mb-3'>Contraseña incorrecta.</div>";
