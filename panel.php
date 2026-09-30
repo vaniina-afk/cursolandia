@@ -2,7 +2,6 @@
 session_start();
 require_once 'includes/conexion.php';
 
-// Si no está logueado, lo mandamos al inicio
 if (!isset($_SESSION['id_usuario'])) {
     header("Location: index.php");
     exit();
@@ -12,15 +11,21 @@ $id_usuario = $_SESSION['id_usuario'];
 $nombre_usuario = $_SESSION['nombre'];
 $es_admin = $_SESSION['es_admin'];
 
-// Buscamos los cursos a los que el usuario se inscribió
-$sql_inscritos = "SELECT c.id_curso, c.titulo, u.nombre, u.apellido 
+// Capturamos el posible error que envíe curso_interno.php
+$mensaje_panel = "";
+if (isset($_GET['error']) && $_GET['error'] == 'inactivo') {
+    $mensaje_panel = "<div class='alert alert-warning p-3 text-center shadow-sm auto-ocultar mb-4'><strong>¡Aviso!</strong> El curso al que intentaste acceder ya no se encuentra activo porque su creador lo deshabilitó.</div>";
+}
+
+// 1. Buscamos las inscripciones (AHORA INCLUYE c.activo)
+$sql_inscritos = "SELECT c.id_curso, c.titulo, c.activo, u.nombre, u.apellido 
                   FROM Inscripciones i 
                   JOIN Cursos c ON i.id_curso = c.id_curso 
                   JOIN Usuarios u ON c.id_creador = u.id_usuario 
                   WHERE i.id_usuario = $id_usuario AND i.estado = 'Aceptado'";
 $cursos_inscritos = $conexion->query($sql_inscritos);
 
-// Buscamos los cursos que el usuario creó
+// 2. Buscamos los cursos creados
 $sql_creados = "SELECT id_curso, titulo, cupo, fecha_inicio 
                 FROM Cursos 
                 WHERE id_creador = $id_usuario AND activo = 1
@@ -38,12 +43,9 @@ $cursos_creados = $conexion->query($sql_creados);
 </head>
 <body class="bg-light">
 
-    <!-- Barra de Navegación -->
     <nav class="navbar navbar-expand-lg navbar-dark shadow-sm mb-4" style="background-color: var(--color-primario);">
         <div class="container">
-            <!-- Acá el logo funciona como atajo para volver a la vidriera (index) -->
             <a class="navbar-brand fw-bold" href="index.php">Cursolandia</a>
-            
             <div class="d-flex align-items-center">
                 <span class="navbar-text text-white me-3 d-none d-md-inline fw-semibold">
                     Hola, <?php echo htmlspecialchars($nombre_usuario); ?>
@@ -56,7 +58,9 @@ $cursos_creados = $conexion->query($sql_creados);
 
     <div class="container mb-5">
         
-        <!-- Sección 1: Accesos Rápidos -->
+        <!-- Mostramos el mensaje si existe -->
+        <?php echo $mensaje_panel; ?>
+
         <div class="row mb-4">
             <div class="col-12">
                 <div class="card card-compacta shadow-sm border-0">
@@ -64,8 +68,6 @@ $cursos_creados = $conexion->query($sql_creados);
                         <span class="fw-bold text-primario align-self-center me-3">Accesos rápidos:</span>
                         <a href="crear_curso.php" class="btn btn-primario btn-sm fw-bold">➕ Crear Nuevo Curso</a>
                         <a href="solicitar_pro.php" class="btn btn-outline-secondary btn-sm fw-bold">⭐ Solicitar PRO</a>
-                        
-                        <!-- Este botón SOLO lo ven los administradores -->
                         <?php if ($es_admin == 1): ?>
                             <a href="admin_solicitudes.php" class="btn btn-warning btn-sm fw-bold text-dark">⚙️ Panel Admin</a>
                         <?php endif; ?>
@@ -74,7 +76,6 @@ $cursos_creados = $conexion->query($sql_creados);
             </div>
         </div>
 
-        <!-- Tablero Principal a dos columnas -->
         <div class="row g-4">
             
             <!-- Columna Izquierda: Mis Inscripciones -->
@@ -83,13 +84,27 @@ $cursos_creados = $conexion->query($sql_creados);
                 <?php if ($cursos_inscritos->num_rows > 0): ?>
                     <div class="list-group shadow-sm">
                         <?php while ($curso = $cursos_inscritos->fetch_assoc()): ?>
-                            <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center p-3 border-0 border-bottom">
+                            <!-- Si el curso está inactivo, le ponemos un fondo más claro -->
+                            <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center p-3 border-0 border-bottom <?php echo $curso['activo'] == 0 ? 'bg-light opacity-75' : ''; ?>">
                                 <div>
-                                    <h6 class="mb-1 fw-bold text-dark"><?php echo htmlspecialchars($curso['titulo']); ?></h6>
+                                    <!-- Si está inactivo, tachamos el título -->
+                                    <h6 class="mb-1 fw-bold <?php echo $curso['activo'] == 0 ? 'text-muted text-decoration-line-through' : 'text-dark'; ?>">
+                                        <?php echo htmlspecialchars($curso['titulo']); ?>
+                                    </h6>
                                     <small class="text-muted">Prof: <?php echo htmlspecialchars($curso['nombre'] . ' ' . $curso['apellido']); ?></small>
+                                    
+                                    <!-- Mensaje chiquito avisando -->
+                                    <?php if ($curso['activo'] == 0): ?>
+                                        <br><small class="text-danger fw-semibold">El creador cerró este curso.</small>
+                                    <?php endif; ?>
                                 </div>
-                                <!-- Botón preparado para el futuro cuando armemos la vista de la clase -->
-                                <button class="btn btn-sm btn-acento fw-bold disabled">Entrar</button>
+                                
+                                <!-- Lógica del botón -->
+                                <?php if ($curso['activo'] == 1): ?>
+                                    <a href="curso_interno.php?id=<?php echo $curso['id_curso']; ?>" class="btn btn-sm btn-acento fw-bold">Entrar</a>
+                                <?php else: ?>
+                                    <button class="btn btn-sm btn-secondary fw-bold" disabled>Inactivo</button>
+                                <?php endif; ?>
                             </div>
                         <?php endwhile; ?>
                     </div>
@@ -117,7 +132,6 @@ $cursos_creados = $conexion->query($sql_creados);
                                 <div class="d-flex justify-content-between align-items-center">
                                     <small class="text-muted">Inicio: <?php echo date("d/m/Y", strtotime($creado['fecha_inicio'])); ?></small>
                                     <div>
-                                        <!-- Botones listos para futuras funcionalidades -->
                                         <a href="editar_curso.php?id=<?php echo $creado['id_curso']; ?>" class="btn btn-sm btn-outline-secondary fw-bold" style="font-size: 0.75rem;">Editar</a>
                                         <a href="borrar_curso.php?id=<?php echo $creado['id_curso']; ?>" class="btn btn-sm btn-outline-danger fw-bold" style="font-size: 0.75rem;" onclick="return confirm('¿Estás seguro de que querés borrar este curso?');">Borrar</a>
                                     </div>
@@ -135,5 +149,18 @@ $cursos_creados = $conexion->query($sql_creados);
 
         </div>
     </div>
+    
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            setTimeout(function() {
+                let alertas = document.querySelectorAll('.auto-ocultar');
+                alertas.forEach(function(alerta) {
+                    alerta.style.transition = "opacity 0.5s ease";
+                    alerta.style.opacity = "0";
+                    setTimeout(() => alerta.remove(), 500); 
+                });
+            }, 4000); 
+        });
+    </script>
 </body>
 </html>
