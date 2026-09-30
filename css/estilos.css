@@ -1,0 +1,51 @@
+/* Paleta de colores Cursolandia */
+:root {
+    --color-primario: #6dce99; /* Violeta profundo */
+    --color-primario-hover: #50a886;
+    --color-acento: #20c997; /* Verde esmeralda/salvia */
+    --color-acento-hover: #1aa179;
+    --fondo-claro: #f8f9fa;
+}
+
+body {
+    background-color: var(--fondo-claro);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Textos */
+.text-primario { color: var(--color-primario) !important; }
+.text-acento { color: var(--color-acento) !important; }
+
+/* Botón Primario (Violeta) */
+.btn-primario {
+    background-color: var(--color-primario);
+    color: white;
+    border: none;
+    transition: 0.3s;
+}
+.btn-primario:hover {
+    background-color: var(--color-primario-hover);
+    color: white;
+}
+
+/* Botón Acento (Verde) */
+.btn-acento {
+    background-color: var(--color-acento);
+    color: white;
+    border: none;
+    transition: 0.3s;
+}
+.btn-acento:hover {
+    background-color: var(--color-acento-hover);
+    color: white;
+}
+
+/* Tarjetas compactas (sin exceso de espacio en blanco) */
+.card-compacta {
+    border: none;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+}
+.card-compacta .card-body {
+    padding: 1.5rem; /* Menos espacio en blanco innecesario */
+}
