@@ -35,12 +35,14 @@ $cursos_creados = $conexion->query($sql_creados);
 
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <title>Mi Panel - Cursolandia</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="css/estilos.css" rel="stylesheet">
 </head>
+
 <body class="bg-light">
 
     <nav class="navbar navbar-expand-lg navbar-dark shadow-sm mb-4" style="background-color: var(--color-primario);">
@@ -57,7 +59,7 @@ $cursos_creados = $conexion->query($sql_creados);
     </nav>
 
     <div class="container mb-5">
-        
+
         <!-- Mostramos el mensaje si existe -->
         <?php echo $mensaje_panel; ?>
 
@@ -69,7 +71,8 @@ $cursos_creados = $conexion->query($sql_creados);
                         <a href="crear_curso.php" class="btn btn-primario btn-sm fw-bold">➕ Crear Nuevo Curso</a>
                         <a href="solicitar_pro.php" class="btn btn-outline-secondary btn-sm fw-bold">⭐ Solicitar PRO</a>
                         <?php if ($es_admin == 1): ?>
-                            <a href="admin_solicitudes.php" class="btn btn-warning btn-sm fw-bold text-dark">⚙️ Panel Admin</a>
+                            <a href="admin_solicitudes.php" class="btn btn-warning btn-sm fw-bold text-dark">⚙️ Panel
+                                Admin</a>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -77,7 +80,7 @@ $cursos_creados = $conexion->query($sql_creados);
         </div>
 
         <div class="row g-4">
-            
+
             <!-- Columna Izquierda: Mis Inscripciones -->
             <div class="col-md-6">
                 <h4 class="text-primario fw-bold mb-3">Mis Inscripciones</h4>
@@ -85,23 +88,27 @@ $cursos_creados = $conexion->query($sql_creados);
                     <div class="list-group shadow-sm">
                         <?php while ($curso = $cursos_inscritos->fetch_assoc()): ?>
                             <!-- Si el curso está inactivo, le ponemos un fondo más claro -->
-                            <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center p-3 border-0 border-bottom <?php echo $curso['activo'] == 0 ? 'bg-light opacity-75' : ''; ?>">
+                            <div
+                                class="list-group-item list-group-item-action d-flex justify-content-between align-items-center p-3 border-0 border-bottom <?php echo $curso['activo'] == 0 ? 'bg-light opacity-75' : ''; ?>">
                                 <div>
                                     <!-- Si está inactivo, tachamos el título -->
-                                    <h6 class="mb-1 fw-bold <?php echo $curso['activo'] == 0 ? 'text-muted text-decoration-line-through' : 'text-dark'; ?>">
+                                    <h6
+                                        class="mb-1 fw-bold <?php echo $curso['activo'] == 0 ? 'text-muted text-decoration-line-through' : 'text-dark'; ?>">
                                         <?php echo htmlspecialchars($curso['titulo']); ?>
                                     </h6>
-                                    <small class="text-muted">Prof: <?php echo htmlspecialchars($curso['nombre'] . ' ' . $curso['apellido']); ?></small>
-                                    
+                                    <small class="text-muted">Prof:
+                                        <?php echo htmlspecialchars($curso['nombre'] . ' ' . $curso['apellido']); ?></small>
+
                                     <!-- Mensaje chiquito avisando -->
                                     <?php if ($curso['activo'] == 0): ?>
                                         <br><small class="text-danger fw-semibold">El creador cerró este curso.</small>
                                     <?php endif; ?>
                                 </div>
-                                
+
                                 <!-- Lógica del botón -->
                                 <?php if ($curso['activo'] == 1): ?>
-                                    <a href="curso_interno.php?id=<?php echo $curso['id_curso']; ?>" class="btn btn-sm btn-acento fw-bold">Entrar</a>
+                                    <a href="curso_interno.php?id=<?php echo $curso['id_curso']; ?>"
+                                        class="btn btn-sm btn-acento fw-bold">Entrar</a>
                                 <?php else: ?>
                                     <button class="btn btn-sm btn-secondary fw-bold" disabled>Inactivo</button>
                                 <?php endif; ?>
@@ -130,10 +137,18 @@ $cursos_creados = $conexion->query($sql_creados);
                                     </span>
                                 </div>
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <small class="text-muted">Inicio: <?php echo date("d/m/Y", strtotime($creado['fecha_inicio'])); ?></small>
+                                    <small class="text-muted">Inicio:
+                                        <?php echo date("d/m/Y", strtotime($creado['fecha_inicio'])); ?></small>
                                     <div>
-                                        <a href="editar_curso.php?id=<?php echo $creado['id_curso']; ?>" class="btn btn-sm btn-outline-secondary fw-bold" style="font-size: 0.75rem;">Editar</a>
-                                        <a href="borrar_curso.php?id=<?php echo $creado['id_curso']; ?>" class="btn btn-sm btn-outline-danger fw-bold" style="font-size: 0.75rem;" onclick="return confirm('¿Estás seguro de que querés borrar este curso?');">Borrar</a>
+                                        <a href="curso_interno.php?id=<?php echo $creado['id_curso']; ?>"
+                                            class="btn btn-sm btn-outline-primary fw-bold" style="font-size: 0.75rem;">Ver
+                                            Aula</a>
+                                        <a href="editar_curso.php?id=<?php echo $creado['id_curso']; ?>"
+                                            class="btn btn-sm btn-outline-secondary fw-bold"
+                                            style="font-size: 0.75rem;">Editar</a>
+                                        <a href="borrar_curso.php?id=<?php echo $creado['id_curso']; ?>"
+                                            class="btn btn-sm btn-outline-danger fw-bold" style="font-size: 0.75rem;"
+                                            onclick="return confirm('¿Estás seguro de que querés borrar este curso?');">Borrar</a>
                                     </div>
                                 </div>
                             </div>
@@ -142,16 +157,25 @@ $cursos_creados = $conexion->query($sql_creados);
                 <?php else: ?>
                     <div class="alert alert-secondary text-center shadow-sm p-3 small">
                         Aún no sos profesor en nuestra plataforma. <br>
-                        <a href="crear_curso.php" class="fw-bold text-primario text-decoration-none">Crear mi primer curso</a>
+                        <a href="crear_curso.php" class="fw-bold text-primario text-decoration-none">Crear mi primer
+                            curso</a>
                     </div>
                 <?php endif; ?>
             </div>
 
         </div>
     </div>
-    
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function() {
+            // Limpiar URL del panel
+            if (window.history.replaceState) {
+                const url = new URL(window.location.href);
+                url.searchParams.delete('error');
+                window.history.replaceState(null, null, url);
+            }
+
             setTimeout(function() {
                 let alertas = document.querySelectorAll('.auto-ocultar');
                 alertas.forEach(function(alerta) {
@@ -163,4 +187,5 @@ $cursos_creados = $conexion->query($sql_creados);
         });
     </script>
 </body>
+
 </html>
