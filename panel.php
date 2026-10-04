@@ -15,6 +15,9 @@ $es_admin = $_SESSION['es_admin'];
 $mensaje_panel = "";
 if (isset($_GET['error']) && $_GET['error'] == 'inactivo') {
     $mensaje_panel = "<div class='alert alert-warning p-3 text-center shadow-sm auto-ocultar mb-4'><strong>¡Aviso!</strong> El curso al que intentaste acceder ya no se encuentra activo porque su creador lo deshabilitó.</div>";
+} elseif (isset($_GET['baja'])) {
+    // AGREGAMOS ESTE NUEVO MENSAJE VERDE
+    $mensaje_panel = "<div class='alert alert-success p-3 text-center shadow-sm auto-ocultar mb-4'>Te has dado de baja del curso exitosamente.</div>";
 }
 
 // 1. Buscamos las inscripciones (AHORA INCLUYE c.activo)
@@ -107,10 +110,15 @@ $cursos_creados = $conexion->query($sql_creados);
 
                                 <!-- Lógica del botón -->
                                 <?php if ($curso['activo'] == 1): ?>
-                                    <a href="curso_interno.php?id=<?php echo $curso['id_curso']; ?>"
-                                        class="btn btn-sm btn-acento fw-bold">Entrar</a>
+                                    <div class="d-flex flex-column gap-1 text-end">
+                                        <a href="curso_interno.php?id=<?php echo $curso['id_curso']; ?>" class="btn btn-sm btn-acento fw-bold">Entrar</a>
+                                        <a href="dejar_curso.php?id=<?php echo $curso['id_curso']; ?>" class="btn btn-sm btn-outline-danger fw-bold" style="font-size: 0.75rem;" onclick="return confirm('¿Seguro que querés abandonar este curso?');">Dejar curso</a>
+                                    </div>
                                 <?php else: ?>
-                                    <button class="btn btn-sm btn-secondary fw-bold" disabled>Inactivo</button>
+                                    <div class="d-flex flex-column gap-1 text-end">
+                                        <button class="btn btn-sm btn-secondary fw-bold" disabled>Inactivo</button>
+                                        <a href="dejar_curso.php?id=<?php echo $curso['id_curso']; ?>" class="btn btn-sm btn-outline-danger fw-bold" style="font-size: 0.75rem;" onclick="return confirm('¿Seguro que querés eliminar este curso de tu lista?');">Quitar de lista</a>
+                                    </div>
                                 <?php endif; ?>
                             </div>
                         <?php endwhile; ?>
@@ -173,6 +181,7 @@ $cursos_creados = $conexion->query($sql_creados);
             if (window.history.replaceState) {
                 const url = new URL(window.location.href);
                 url.searchParams.delete('error');
+                url.searchParams.delete('baja');
                 window.history.replaceState(null, null, url);
             }
 

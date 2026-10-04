@@ -43,6 +43,16 @@ if (!$acceso_permitido) {
 // Traemos los materiales
 $sql_materiales = "SELECT * FROM Materiales WHERE id_curso = $id_curso";
 $materiales = $conexion->query($sql_materiales);
+
+// Traemos los alumnos (Solo si es el creador)
+$alumnos = null;
+if ($curso['id_creador'] == $id_usuario) {
+    $sql_alumnos = "SELECT u.nombre, u.apellido, u.email, u.imagen_perfil 
+                    FROM Inscripciones i
+                    JOIN Usuarios u ON i.id_usuario = u.id_usuario
+                    WHERE i.id_curso = $id_curso AND i.estado = 'Aceptado'";
+    $alumnos = $conexion->query($sql_alumnos);
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -147,6 +157,56 @@ $materiales = $conexion->query($sql_materiales);
             </div>
             
         </div>
+
+        <?php if ($curso['id_creador'] == $id_usuario): ?>
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card card-compacta shadow-sm border-0">
+                    <div class="card-body p-4">
+                        <h4 class="text-primario fw-bold mb-3">👥 Alumnos Inscriptos</h4>
+                        
+                        <?php if ($alumnos && $alumnos->num_rows > 0): ?>
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0">
+                                    <tbody>
+                                        <?php while ($alumno = $alumnos->fetch_assoc()): ?>
+                                            <tr>
+                                                <td class="border-0 border-bottom py-3">
+                                                    <div class="d-flex align-items-center">
+                                                        
+                                                        <!-- Lógica de la Foto / Inicial -->
+                                                        <?php if (!empty($alumno['foto_perfil'])): ?>
+                                                            <img src="uploads/<?php echo htmlspecialchars($alumno['foto_perfil']); ?>" class="rounded-circle me-3 shadow-sm" style="width: 45px; height: 45px; object-fit: cover;" alt="Foto">
+                                                        <?php else: ?>
+                                                            <div class="text-white rounded-circle d-flex justify-content-center align-items-center me-3 shadow-sm" style="width: 45px; height: 45px; font-size: 1.2rem; font-weight: bold; background-color: var(--color-primario);">
+                                                                <?php echo strtoupper(substr($alumno['nombre'], 0, 1)); ?>
+                                                            </div>
+                                                        <?php endif; ?>
+                                                        
+                                                        <div>
+                                                            <span class="fw-bold text-dark d-block"><?php echo htmlspecialchars($alumno['nombre'] . ' ' . $alumno['apellido']); ?></span>
+                                                            <a href="mailto:<?php echo htmlspecialchars($alumno['email']); ?>" class="text-decoration-none text-muted small">
+                                                                ✉️ <?php echo htmlspecialchars($alumno['email']); ?>
+                                                            </a>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        <?php endwhile; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php else: ?>
+                            <div class="alert alert-light text-center border mt-2 mb-0">
+                                <span class="text-muted small">Aún no hay alumnos inscriptos en este curso.</span>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+
     </div>
 
     <!-- Modal (Oculto para alumnos) -->
