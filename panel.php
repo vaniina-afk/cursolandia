@@ -11,6 +11,23 @@ $id_usuario = $_SESSION['id_usuario'];
 $nombre_usuario = $_SESSION['nombre'];
 $es_admin = $_SESSION['es_admin'];
 
+// Buscar notificaciones del usuario
+$sql_notificaciones = "SELECT * FROM notificaciones WHERE id_usuario = $id_usuario ORDER BY fecha DESC LIMIT 5";
+$result_noti = $conexion->query($sql_notificaciones);
+
+// Contar cuántas están sin leer
+$sql_no_leidas = "SELECT COUNT(*) as sin_leer FROM notificaciones WHERE id_usuario = $id_usuario AND leida = 0";
+$no_leidas = $conexion->query($sql_no_leidas)->fetch_assoc()['sin_leer'];
+
+// Función para calcular "Hace X tiempo"
+function tiempo_transcurrido($fecha) {
+    $diferencia = time() - strtotime($fecha);
+    if ($diferencia < 60) return "Hace instantes";
+    if ($diferencia < 3600) return "Hace " . floor($diferencia / 60) . " min";
+    if ($diferencia < 86400) return "Hace " . floor($diferencia / 3600) . " hs";
+    return "Hace " . floor($diferencia / 86400) . " días";
+}
+
 // Capturamos el posible error que envíe curso_interno.php
 $mensaje_panel = "";
 if (isset($_GET['error']) && $_GET['error'] == 'inactivo') {
@@ -51,12 +68,51 @@ $cursos_creados = $conexion->query($sql_creados);
     <nav class="navbar navbar-expand-lg navbar-dark shadow-sm mb-4" style="background-color: var(--color-primario);">
         <div class="container">
             <a class="navbar-brand fw-bold" href="index.php">Cursolandia</a>
-            <div class="d-flex align-items-center">
-                <span class="navbar-text text-white me-3 d-none d-md-inline fw-semibold">
-                    Hola, <?php echo htmlspecialchars($nombre_usuario); ?>
-                </span>
-                <a href="index.php" class="btn btn-outline-light btn-sm me-2">Ver Catálogo</a>
-                <a href="logout.php" class="btn btn-acento btn-sm">Salir</a>
+            <div class="d-flex align-items-center gap-3">
+                
+                <!-- DROPDOWN DE NOTIFICACIONES -->
+                <div class="dropdown">
+                    <a href="#" class="text-white text-decoration-none position-relative" id="campanita" data-bs-toggle="dropdown" aria-expanded="false">
+                        <span style="font-size: 1.2rem;">🔔</span>
+                        <?php if ($no_leidas > 0): ?>
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.6rem;">
+                                <?php echo $no_leidas; ?>
+                            </span>
+                        <?php endif; ?>
+                    </a>
+                    
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0" aria-labelledby="campanita" style="width: 320px; max-height: 400px; overflow-y: auto; z-index: 1050;">
+                        <li><h6 class="dropdown-header fw-bold text-dark border-bottom pb-2">Notificaciones</h6></li>
+                        
+                        <?php if ($result_noti && $result_noti->num_rows > 0): ?>
+                            <?php while($noti = $result_noti->fetch_assoc()): ?>
+                                <li>
+                                    <a class="dropdown-item py-3 border-bottom text-wrap <?php echo ($noti['leida'] == 0) ? 'bg-light' : ''; ?>" href="leer_notificacion.php?id=<?php echo $noti['id_notificacion']; ?>">
+                                        <div class="d-flex flex-column gap-1">
+                                            <span class="small" style="line-height: 1.2;"><?php echo htmlspecialchars($noti['mensaje']); ?></span>
+                                            <small class="text-primario fw-bold" style="font-size: 0.7rem;">
+                                                ⏱️ <?php echo tiempo_transcurrido($noti['fecha']); ?>
+                                            </small>
+                                        </div>
+                                    </a>
+                                </li>
+                            <?php endwhile; ?>
+                            <li><a class="dropdown-item text-center small text-muted py-2" href="#">Ver todas</a></li>
+                        <?php else: ?>
+                            <li><span class="dropdown-item text-muted small text-center py-3">No tenés notificaciones nuevas.</span></li>
+                        <?php endif; ?>
+                    </ul>
+                </div>
+                <!-- FIN NOTIFICACIONES -->
+
+                <!-- Saludo y Botones -->
+                <div class="d-flex align-items-center">
+                    <span class="navbar-text text-white me-3 d-none d-md-inline fw-semibold">
+                        Hola, <?php echo htmlspecialchars($nombre_usuario); ?>
+                    </span>
+                    <a href="index.php" class="btn btn-outline-light btn-sm me-2">Ver Catálogo</a>
+                    <a href="logout.php" class="btn btn-acento btn-sm">Salir</a>
+                </div>
             </div>
         </div>
     </nav>

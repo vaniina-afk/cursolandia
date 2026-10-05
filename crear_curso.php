@@ -13,7 +13,7 @@ $mensaje = "";
 $query_usuario = $conexion->query("SELECT plan_pro FROM Usuarios WHERE id_usuario = $id_usuario");
 $es_pro = $query_usuario->fetch_assoc()['plan_pro'];
 
-$query_cursos = $conexion->query("SELECT COUNT(*) as total FROM Cursos WHERE id_creador = $id_usuario");
+$query_cursos = $conexion->query("SELECT COUNT(*) as total FROM Cursos WHERE id_creador = $id_usuario AND activo = 1");
 $total_cursos = $query_cursos->fetch_assoc()['total'];
 
 $puede_crear = true;

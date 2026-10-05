@@ -53,6 +53,14 @@ if ($curso['id_creador'] == $id_usuario) {
                     WHERE i.id_curso = $id_curso AND i.estado = 'Aceptado'";
     $alumnos = $conexion->query($sql_alumnos);
 }
+
+// Traemos las preguntas del foro
+$sql_foro = "SELECT p.*, u.nombre, u.apellido 
+             FROM preguntas p 
+             JOIN Usuarios u ON p.id_usuario = u.id_usuario 
+             WHERE p.id_curso = $id_curso 
+             ORDER BY p.fecha_creacion DESC";
+$preguntas_foro = $conexion->query($sql_foro);
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -147,10 +155,42 @@ if ($curso['id_creador'] == $id_usuario) {
                     <div class="card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
                             <h4 class="text-primario fw-bold mb-0">💬 Foro de Consultas</h4>
-                            <button class="btn btn-sm btn-outline-secondary fw-bold">Nueva Pregunta</button>
+                            <button class="btn btn-sm btn-outline-secondary fw-bold" data-bs-toggle="modal" data-bs-target="#modalPregunta">Nueva Pregunta</button>
                         </div>
-                        <div class="alert alert-light text-center border mt-4">
-                            <span class="text-muted small">No hay consultas activas. ¡Sé el primero en preguntar!</span>
+                        <!-- Listado dinámico de preguntas -->
+                        <div class="foro-contenedor mt-3" style="max-height: 350px; overflow-y: auto;">
+                            <?php if ($preguntas_foro && $preguntas_foro->num_rows > 0): ?>
+                                <div class="list-group list-group-flush">
+                                    <?php while ($pregunta = $preguntas_foro->fetch_assoc()): ?>
+                                        <!-- Más adelante crearemos 'pregunta_foro.php' para ver las respuestas -->
+                                        <a href="pregunta_foro.php?id=<?php echo $pregunta['id_pregunta']; ?>" class="list-group-item list-group-item-action py-3 px-2 border-bottom">
+                                            <div class="d-flex w-100 justify-content-between align-items-center mb-1">
+                                                <h6 class="mb-0 fw-bold text-dark text-truncate pe-2"><?php echo htmlspecialchars($pregunta['titulo']); ?></h6>
+                                                <small class="text-muted text-nowrap" style="font-size: 0.75rem;">
+                                                    <?php echo date('d/m H:i', strtotime($pregunta['fecha_creacion'])); ?>
+                                                </small>
+                                            </div>
+                                            <p class="mb-2 small text-secondary text-truncate">
+                                                <?php echo htmlspecialchars($pregunta['cuerpo']); ?>
+                                            </p>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <small class="text-primario fw-semibold">
+                                                    👤 <?php echo htmlspecialchars($pregunta['nombre'] . ' ' . $pregunta['apellido']); ?>
+                                                </small>
+                                                <?php if ($pregunta['estado'] == 'Resuelta'): ?>
+                                                    <span class="badge bg-success rounded-pill" style="font-size: 0.65rem;">Resuelta</span>
+                                                <?php else: ?>
+                                                    <span class="badge bg-warning text-dark rounded-pill" style="font-size: 0.65rem;">Abierta</span>
+                                                <?php endif; ?>
+                                            </div>
+                                        </a>
+                                    <?php endwhile; ?>
+                                </div>
+                            <?php else: ?>
+                                <div class="alert alert-light text-center border">
+                                    <span class="text-muted small">No hay consultas activas. ¡Sé el primero en preguntar!</span>
+                                </div>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -243,6 +283,37 @@ if ($curso['id_creador'] == $id_usuario) {
         </div>
     </div>
     <?php endif; ?>
+
+    <!-- Modal Nueva Pregunta Foro -->
+    <div class="modal fade" id="modalPregunta" tabindex="-1" aria-labelledby="modalPreguntaLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content border-0 shadow">
+                <form action="procesar_pregunta.php" method="POST">
+                    <div class="modal-header bg-light border-bottom-0">
+                        <h5 class="modal-title text-primario fw-bold" id="modalPreguntaLabel">Hacer una consulta</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <!-- Pasamos el ID del curso de forma oculta -->
+                        <input type="hidden" name="id_curso" value="<?php echo $curso['id_curso']; ?>">
+                        
+                        <div class="mb-3">
+                            <label class="form-label text-secondary fw-semibold small mb-1">Título de tu duda</label>
+                            <input type="text" name="titulo" class="form-control form-control-sm" required placeholder="Ej: Duda sobre el Trabajo Práctico 1">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-secondary fw-semibold small mb-1">Detalle</label>
+                            <textarea name="cuerpo" class="form-control form-control-sm" rows="4" required placeholder="Explicá tu duda con más detalle para que puedan ayudarte..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-top-0 bg-light">
+                        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-sm btn-primario fw-bold">Publicar Pregunta</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
