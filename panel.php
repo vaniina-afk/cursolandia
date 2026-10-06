@@ -11,22 +11,7 @@ $id_usuario = $_SESSION['id_usuario'];
 $nombre_usuario = $_SESSION['nombre'];
 $es_admin = $_SESSION['es_admin'];
 
-// Buscar notificaciones del usuario
-$sql_notificaciones = "SELECT * FROM notificaciones WHERE id_usuario = $id_usuario ORDER BY fecha DESC LIMIT 5";
-$result_noti = $conexion->query($sql_notificaciones);
-
-// Contar cuántas están sin leer
-$sql_no_leidas = "SELECT COUNT(*) as sin_leer FROM notificaciones WHERE id_usuario = $id_usuario AND leida = 0";
-$no_leidas = $conexion->query($sql_no_leidas)->fetch_assoc()['sin_leer'];
-
-// Función para calcular "Hace X tiempo"
-function tiempo_transcurrido($fecha) {
-    $diferencia = time() - strtotime($fecha);
-    if ($diferencia < 60) return "Hace instantes";
-    if ($diferencia < 3600) return "Hace " . floor($diferencia / 60) . " min";
-    if ($diferencia < 86400) return "Hace " . floor($diferencia / 3600) . " hs";
-    return "Hace " . floor($diferencia / 86400) . " días";
-}
+require_once 'includes/logica_notificaciones.php';
 
 // Capturamos el posible error que envíe curso_interno.php
 $mensaje_panel = "";
@@ -97,7 +82,7 @@ $cursos_creados = $conexion->query($sql_creados);
                                     </a>
                                 </li>
                             <?php endwhile; ?>
-                            <li><a class="dropdown-item text-center small text-muted py-2" href="#">Ver todas</a></li>
+                            <li><a class="dropdown-item text-center small text-muted py-2" href="notificaciones.php">Ver todas</a></li>
                         <?php else: ?>
                             <li><span class="dropdown-item text-muted small text-center py-3">No tenés notificaciones nuevas.</span></li>
                         <?php endif; ?>

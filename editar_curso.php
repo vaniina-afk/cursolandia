@@ -16,21 +16,42 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $titulo = $conexion->real_escape_string($_POST['titulo']);
     $descripcion = $conexion->real_escape_string($_POST['descripcion']);
     $costo = !empty($_POST['costo']) ? (float)$_POST['costo'] : 'NULL';
-    $cupo = !empty($_POST['cupo']) ? (int)$_POST['cupo'] : 'NULL';
+    $cupo_ingresado = !empty($_POST['cupo']) ? (int)$_POST['cupo'] : 'NULL';
     $fecha_inicio = $_POST['fecha_inicio'];
     $fecha_fin = $_POST['fecha_fin'];
 
     if ($fecha_fin < $fecha_inicio) {
          $mensaje = "<div class='alert alert-danger p-2 small mb-3'>La fecha de fin no puede ser anterior a la de inicio.</div>";
     } else {
-        $sql_update = "UPDATE Cursos 
-                       SET titulo = '$titulo', descripcion = '$descripcion', costo = $costo, cupo = $cupo, fecha_inicio = '$fecha_inicio', fecha_fin = '$fecha_fin' 
-                       WHERE id_curso = $id_curso AND id_creador = $id_usuario";
-        
-        if ($conexion->query($sql_update)) {
-            $mensaje = "<div class='alert alert-success p-2 small mb-3 auto-ocultar'>¡Curso actualizado con éxito!</div>";
-        } else {
-            $mensaje = "<div class='alert alert-danger p-2 small mb-3'>Error: " . $conexion->error . "</div>";
+        // Contamos cuántos alumnos ya están adentro para hacer la matemática correcta
+        $sql_inscriptos = "SELECT COUNT(*) as total FROM Inscripciones WHERE id_curso = $id_curso AND estado = 'Aceptado'";
+        $inscriptos = $conexion->query($sql_inscriptos)->fetch_assoc()['total'];
+
+        $error_cupo = false;
+        $cupo_final = 'NULL';
+
+        if ($cupo_ingresado !== 'NULL') {
+            if ($cupo_ingresado < $inscriptos) {
+                // Evitamos que el profesor ponga un límite menor a la gente que ya está cursando
+                $error_cupo = true;
+                $mensaje = "<div class='alert alert-danger p-2 small mb-3'>No podés establecer un cupo total de $cupo_ingresado. Ya tenés $inscriptos alumno/s inscripto/s.</div>";
+            } else {
+                // Al cupo total que quiere el profe, le restamos los que ya ocupan silla
+                $cupo_final = $cupo_ingresado - $inscriptos;
+            }
+        }
+
+        // Si la validación del cupo pasó sin problemas, actualizamos
+        if (!$error_cupo) {
+            $sql_update = "UPDATE Cursos 
+                           SET titulo = '$titulo', descripcion = '$descripcion', costo = $costo, cupo = $cupo_final, fecha_inicio = '$fecha_inicio', fecha_fin = '$fecha_fin' 
+                           WHERE id_curso = $id_curso AND id_creador = $id_usuario";
+            
+            if ($conexion->query($sql_update)) {
+                $mensaje = "<div class='alert alert-success p-2 small mb-3 auto-ocultar'>¡Curso actualizado con éxito!</div>";
+            } else {
+                $mensaje = "<div class='alert alert-danger p-2 small mb-3'>Error: " . $conexion->error . "</div>";
+            }
         }
     }
 }
@@ -40,11 +61,17 @@ $sql_curso = "SELECT * FROM Cursos WHERE id_curso = $id_curso AND id_creador = $
 $resultado = $conexion->query($sql_curso);
 
 if ($resultado->num_rows == 0) {
-    header("Location: panel.php"); // Si no es el creador o no existe, lo echamos
+    header("Location: panel.php"); 
     exit();
 }
 
 $curso = $resultado->fetch_assoc();
+
+// Calculamos el cupo TOTAL (disponibles + inscriptos) para mostrarle al profesor en el input
+$sql_inscriptos_form = "SELECT COUNT(*) as total FROM Inscripciones WHERE id_curso = $id_curso AND estado = 'Aceptado'";
+$inscriptos_actuales = $conexion->query($sql_inscriptos_form)->fetch_assoc()['total'];
+
+$cupo_mostrar = ($curso['cupo'] !== null) ? ($curso['cupo'] + $inscriptos_actuales) : '';
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -89,7 +116,8 @@ $curso = $resultado->fetch_assoc();
                                 </div>
                                 <div class="col">
                                     <label class="form-label text-secondary fw-semibold small mb-1">Cupo Máximo</label>
-                                    <input type="number" min="1" name="cupo" class="form-control form-control-sm" value="<?php echo $curso['cupo']; ?>" placeholder="Vacío para sin límite">
+                                    <!-- Acá inyectamos el cupo total real calculado en PHP -->
+                                    <input type="number" min="1" name="cupo" class="form-control form-control-sm" value="<?php echo $cupo_mostrar; ?>" placeholder="Vacío para sin límite">
                                 </div>
                             </div>
                             
