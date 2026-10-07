@@ -13,8 +13,8 @@ $id_pregunta = (int)$_GET['id'];
 
 require_once 'includes/logica_notificaciones.php'; 
 
-// 1. Traer los datos de la pregunta principal
-$sql_pregunta = "SELECT p.*, u.nombre, u.apellido, u.imagen_perfil, c.titulo as curso_titulo 
+// 1. Traer los datos de la pregunta principal y saber quién es el creador del curso
+$sql_pregunta = "SELECT p.*, u.nombre, u.apellido, u.imagen_perfil, c.titulo as curso_titulo, c.id_creador 
                  FROM preguntas p 
                  JOIN Usuarios u ON p.id_usuario = u.id_usuario 
                  JOIN Cursos c ON p.id_curso = c.id_curso
@@ -28,12 +28,16 @@ if ($result_pregunta->num_rows == 0) {
 $pregunta = $result_pregunta->fetch_assoc();
 $id_curso = $pregunta['id_curso'];
 
+// Variables para los permisos
+$es_creador = ($id_usuario == $pregunta['id_creador']);
+$es_autor_pregunta = ($id_usuario == $pregunta['id_usuario']);
+
 // 2. Traer todas las respuestas asociadas a esta pregunta
 $sql_respuestas = "SELECT r.*, u.nombre, u.apellido, u.imagen_perfil 
                    FROM respuestas r 
                    JOIN Usuarios u ON r.id_usuario = u.id_usuario 
                    WHERE r.id_pregunta = $id_pregunta 
-                   ORDER BY r.fecha_creacion ASC";
+                   ORDER BY r.es_destacada DESC, r.fecha_creacion ASC"; // Muestra las destacadas primero
 $respuestas = $conexion->query($sql_respuestas);
 ?>
 <!DOCTYPE html>
@@ -108,7 +112,9 @@ $respuestas = $conexion->query($sql_respuestas);
                     <div class="card-body p-4">
                         <div class="d-flex justify-content-between align-items-start mb-3">
                             <h4 class="text-primario fw-bold mb-0"><?php echo htmlspecialchars($pregunta['titulo']); ?></h4>
-                            <?php if ($pregunta['estado'] == 'Resuelta'): ?>
+                            <?php if (isset($pregunta['cerrada']) && $pregunta['cerrada'] == 1): ?>
+                                <span class="badge bg-secondary">🔒 Tema Cerrado</span>
+                            <?php elseif ($pregunta['estado'] == 'Resuelta'): ?>
                                 <span class="badge bg-success">Resuelta</span>
                             <?php else: ?>
                                 <span class="badge bg-warning text-dark">Abierta</span>
@@ -129,6 +135,19 @@ $respuestas = $conexion->query($sql_respuestas);
                             </div>
                         </div>
                         <p class="mb-0" style="white-space: pre-wrap; font-size: 0.95rem; line-height: 1.6;"><?php echo htmlspecialchars($pregunta['cuerpo']); ?></p>
+                        
+                        <!-- BOTONES DE MODERACIÓN DE PREGUNTA -->
+                        <?php if ($es_autor_pregunta || $es_creador): ?>
+                            <div class="mt-4 d-flex justify-content-end gap-2 border-top pt-3">
+                                
+                                <!-- Botón visible para el autor y para el creador del curso -->
+                                <a href="acciones_foro.php?accion=eliminar_pregunta&id=<?php echo $id_pregunta; ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Seguro que querés eliminar esta pregunta y todas sus respuestas?');">🗑️ Eliminar Pregunta</a>
+                                
+                                <?php if ($es_creador && (isset($pregunta['cerrada']) && $pregunta['cerrada'] == 0)): ?>
+                                    <a href="acciones_foro.php?accion=cerrar_pregunta&id=<?php echo $id_pregunta; ?>" class="btn btn-sm btn-outline-secondary" onclick="return confirm('¿Querés cerrar este tema? Ya no se permitirán nuevas respuestas.');">🔒 Cerrar Tema</a>
+                                <?php endif; ?>
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </div>
 
@@ -138,19 +157,34 @@ $respuestas = $conexion->query($sql_respuestas);
                 <?php if ($respuestas->num_rows > 0): ?>
                     <div class="d-flex flex-column gap-3 mb-4">
                         <?php while($respuesta = $respuestas->fetch_assoc()): ?>
-                            <!-- Si la respuesta es destacada, le ponemos un borde verde a la izquierda -->
-                            <div class="card shadow-sm border-0 <?php echo $respuesta['es_destacada'] ? 'border-start border-success border-4' : ''; ?>">
+                            <?php $es_autor_respuesta = ($id_usuario == $respuesta['id_usuario']); ?>
+                            
+                            <!-- Estilo "amarillito" para destacadas -->
+                            <div class="card shadow-sm mb-1 <?php echo $respuesta['es_destacada'] ? 'border-warning border-2' : 'border-0'; ?>" <?php echo $respuesta['es_destacada'] ? 'style="background-color: #fffdf2;"' : ''; ?>>
                                 <div class="card-body p-3">
                                     <div class="d-flex align-items-center mb-2">
                                         <span class="fw-bold me-auto text-dark" style="font-size: 0.9rem;">
                                             <?php echo htmlspecialchars($respuesta['nombre'] . ' ' . $respuesta['apellido']); ?>
                                             <?php if ($respuesta['es_destacada']): ?>
-                                                <span class="badge bg-success ms-2" style="font-size: 0.65rem;">Respuesta del Profesor</span>
+                                                <span class="badge bg-warning text-dark ms-2" style="font-size: 0.65rem;">⭐ Respuesta Destacada</span>
                                             <?php endif; ?>
                                         </span>
                                         <small class="text-muted" style="font-size: 0.75rem;"><?php echo date('d/m/Y H:i', strtotime($respuesta['fecha_creacion'])); ?></small>
                                     </div>
-                                    <p class="mb-0 text-secondary" style="white-space: pre-wrap; font-size: 0.9rem;"><?php echo htmlspecialchars($respuesta['cuerpo']); ?></p>
+                                    <p class="mb-3 text-secondary" style="white-space: pre-wrap; font-size: 0.9rem;"><?php echo htmlspecialchars($respuesta['cuerpo']); ?></p>
+                                    
+                                    <!-- BOTONES DE MODERACIÓN DE RESPUESTA -->
+                                    <?php if ($es_creador || $es_autor_respuesta): ?>
+                                        <div class="d-flex justify-content-end gap-2">
+                                            <?php if ($es_creador): ?>
+                                                <a href="acciones_foro.php?accion=destacar_respuesta&id=<?php echo $respuesta['id_respuesta']; ?>&id_pregunta=<?php echo $id_pregunta; ?>" class="btn btn-sm <?php echo $respuesta['es_destacada'] ? 'btn-warning' : 'btn-outline-warning'; ?>" title="Destacar / Quitar destacado">⭐</a>
+                                            <?php endif; ?>
+                                            
+                                            <?php if ($es_autor_respuesta || $es_creador): ?>
+                                                <a href="acciones_foro.php?accion=eliminar_respuesta&id=<?php echo $respuesta['id_respuesta']; ?>&id_pregunta=<?php echo $id_pregunta; ?>" class="btn btn-sm btn-outline-danger" title="Eliminar" onclick="return confirm('¿Estás seguro de eliminar esta respuesta?');">🗑️</a>
+                                            <?php endif; ?>
+                                        </div>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         <?php endwhile; ?>
@@ -161,27 +195,34 @@ $respuestas = $conexion->query($sql_respuestas);
                     </div>
                 <?php endif; ?>
 
-                <!-- CAJA PARA ESCRIBIR UNA NUEVA RESPUESTA -->
-                <div class="card shadow-sm border-0">
-                    <div class="card-body p-4">
-                        <h6 class="fw-bold mb-3 text-primario">Escribir una respuesta</h6>
-                        <form action="procesar_respuesta.php" method="POST">
-                            <input type="hidden" name="id_pregunta" value="<?php echo $id_pregunta; ?>">
-                            <input type="hidden" name="id_curso" value="<?php echo $id_curso; ?>">
-                            
-                            <div class="mb-3">
-                                <textarea name="cuerpo" class="form-control bg-light border-0" rows="3" required placeholder="Escribí tu respuesta acá..." style="resize: none;"></textarea>
-                            </div>
-                            <div class="text-end">
-                                <button type="submit" class="btn btn-primario fw-bold btn-sm px-4">Publicar Respuesta</button>
-                            </div>
-                        </form>
+                <!-- CAJA PARA ESCRIBIR UNA NUEVA RESPUESTA (Solo si está abierta) -->
+                <?php if (isset($pregunta['cerrada']) && $pregunta['cerrada'] == 1): ?>
+                    <div class="alert alert-secondary border text-center text-muted mb-4 shadow-sm">
+                        🔒 El profesor ha cerrado este tema. Ya no se admiten nuevas respuestas.
                     </div>
-                </div>
+                <?php else: ?>
+                    <div class="card shadow-sm border-0">
+                        <div class="card-body p-4">
+                            <h6 class="fw-bold mb-3 text-primario">Escribir una respuesta</h6>
+                            <form action="procesar_respuesta.php" method="POST">
+                                <input type="hidden" name="id_pregunta" value="<?php echo $id_pregunta; ?>">
+                                <input type="hidden" name="id_curso" value="<?php echo $id_curso; ?>">
+                                
+                                <div class="mb-3">
+                                    <textarea name="cuerpo" class="form-control bg-light border-0" rows="3" required placeholder="Escribí tu respuesta acá..." style="resize: none;"></textarea>
+                                </div>
+                                <div class="text-end">
+                                    <button type="submit" class="btn btn-primario fw-bold btn-sm px-4">Publicar Respuesta</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                <?php endif; ?>
 
             </div>
         </div>
     </div>
+    
     <!-- Script de Bootstrap -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>

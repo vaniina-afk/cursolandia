@@ -212,7 +212,7 @@ $preguntas_foro = $conexion->query($sql_foro);
                             <?php if ($preguntas_foro && $preguntas_foro->num_rows > 0): ?>
                                 <div class="list-group list-group-flush">
                                     <?php while ($pregunta = $preguntas_foro->fetch_assoc()): ?>
-                                        <!-- Más adelante crearemos 'pregunta_foro.php' para ver las respuestas -->
+
                                         <a href="pregunta_foro.php?id=<?php echo $pregunta['id_pregunta']; ?>" class="list-group-item list-group-item-action py-3 px-2 border-bottom">
                                             <div class="d-flex w-100 justify-content-between align-items-center mb-1">
                                                 <h6 class="mb-0 fw-bold text-dark text-truncate pe-2"><?php echo htmlspecialchars($pregunta['titulo']); ?></h6>
@@ -227,7 +227,9 @@ $preguntas_foro = $conexion->query($sql_foro);
                                                 <small class="text-primario fw-semibold">
                                                     👤 <?php echo htmlspecialchars($pregunta['nombre'] . ' ' . $pregunta['apellido']); ?>
                                                 </small>
-                                                <?php if ($pregunta['estado'] == 'Resuelta'): ?>
+                                                <?php if (isset($pregunta['cerrada']) && $pregunta['cerrada'] == 1): ?>
+                                                    <span class="badge bg-secondary rounded-pill" style="font-size: 0.65rem;">🔒 Cerrado</span>
+                                                <?php elseif ($pregunta['estado'] == 'Resuelta'): ?>
                                                     <span class="badge bg-success rounded-pill" style="font-size: 0.65rem;">Resuelta</span>
                                                 <?php else: ?>
                                                     <span class="badge bg-warning text-dark rounded-pill" style="font-size: 0.65rem;">Abierta</span>
