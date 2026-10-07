@@ -84,17 +84,30 @@ if (isset($_SESSION['id_usuario'])) {
                     </div>
                     <!-- FIN NOTIFICACIONES -->
 
-                    <!-- Lo que ya tenías: Saludo y Botones de Panel/Salir -->
+                    <!-- Saludo y Botones de Panel/Salir -->
                     <div class="d-flex align-items-center">
-                        <span class="navbar-text text-white me-3 d-none d-md-inline fw-semibold">
-                            Hola, <?php echo htmlspecialchars($_SESSION['nombre']); ?>
-                        </span>
+                    
+                        <!-- MENÚ DESPLEGABLE DEL USUARIO -->
+                        <div class="dropdown me-3 d-none d-md-inline">
+                            <a href="#" class="text-white text-decoration-none dropdown-toggle fw-semibold" id="perfilDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                Hola, <?php echo htmlspecialchars($_SESSION['nombre']); ?>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-2" aria-labelledby="perfilDropdown">
+                                <li>
+                                    <a class="dropdown-item py-2 fw-semibold text-secondary" href="editar_perfil.php">
+                                        ⚙️ Mi Perfil
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- Botones de acción -->
                         <a href="panel.php" class="btn btn-outline-light btn-sm me-2">Mi Panel</a>
                         <a href="logout.php" class="btn btn-acento btn-sm">Salir</a>
                     </div>
 
                 <?php else: ?>
-                    <!-- Lo que ya tenías: Botones para visitantes -->
+                    <!-- Botones para visitantes -->
                     <div class="d-flex align-items-center">
                         <a href="login.php" class="btn btn-outline-light btn-sm me-2 fw-bold">Iniciar Sesión</a>
                         <a href="registro.php" class="btn btn-acento btn-sm fw-bold">Registrarse</a>

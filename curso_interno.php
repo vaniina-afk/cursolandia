@@ -118,9 +118,22 @@ $preguntas_foro = $conexion->query($sql_foro);
 
                 <!-- Saludo y Botones -->
                 <div class="d-flex align-items-center">
-                    <span class="navbar-text text-white me-3 d-none d-md-inline fw-semibold">
-                        Hola, <?php echo htmlspecialchars($_SESSION['nombre']); ?>
-                    </span>
+                    
+                    <!-- MENÚ DESPLEGABLE DEL USUARIO -->
+                    <div class="dropdown me-3 d-none d-md-inline">
+                        <a href="#" class="text-white text-decoration-none dropdown-toggle fw-semibold" id="perfilDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            Hola, <?php echo htmlspecialchars($_SESSION['nombre']); ?>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-2" aria-labelledby="perfilDropdown">
+                            <li>
+                                <a class="dropdown-item py-2 fw-semibold text-secondary" href="editar_perfil.php">
+                                    ⚙️ Mi Perfil
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Botones de acción -->
                     <a href="panel.php" class="btn btn-outline-light btn-sm me-2">Volver al Panel</a>
                     <a href="logout.php" class="btn btn-acento btn-sm">Salir</a>
                 </div>
