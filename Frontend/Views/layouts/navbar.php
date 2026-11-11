@@ -56,13 +56,13 @@
                     </div>
 
                     <a href="panel.php" class="btn btn-outline-light btn-sm me-2">Mi Panel</a>
-                    <a href="logout.php" class="btn btn-acento btn-sm">Salir</a>
+                    <a href="index.php?accion=logout" class="btn btn-acento btn-sm">Salir</a>
                 </div>
 
             <?php else: ?>
                 <div class="d-flex align-items-center">
-                    <a href="login.php" class="btn btn-outline-light btn-sm me-2 fw-bold">Iniciar Sesión</a>
-                    <a href="registro.php" class="btn btn-acento btn-sm fw-bold">Registrarse</a>
+                    <a href="index.php?accion=login" class="btn btn-outline-light btn-sm me-2 fw-bold">Iniciar Sesión</a>
+                    <a href="index.php?accion=registro" class="btn btn-acento btn-sm fw-bold">Registrarse</a>
                 </div>
             <?php endif; ?>
         </div>

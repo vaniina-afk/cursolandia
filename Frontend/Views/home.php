@@ -53,7 +53,7 @@ require_once __DIR__ . '/layouts/navbar.php';
 
                             <div class="mt-auto">
                                 <?php if (!isset($_SESSION['id_usuario'])): ?>
-                                    <a href="login.php" class="btn btn-outline-secondary w-100 btn-sm fw-bold">Inicia sesión para inscribirte</a>
+                                    <a href="index.php?accion=login" class="btn btn-outline-secondary w-100 btn-sm fw-bold">Inicia sesión para inscribirte</a>
                                 <?php elseif ($_SESSION['es_admin'] == 1): ?>
                                     <button class="btn btn-secondary w-100 btn-sm fw-bold" disabled>Modo Admin</button>
                                 <?php elseif ($_SESSION['id_usuario'] == $curso['id_creador']): ?>
