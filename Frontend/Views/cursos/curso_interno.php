@@ -17,6 +17,10 @@ require_once __DIR__ . '/../layouts/navbar.php';
         <div class="alert alert-danger text-center shadow-sm mb-4">Error desde el servidor: El archivo supera el límite máximo de 5MB.</div>
     <?php elseif (isset($_GET['error'])): ?>
         <div class="alert alert-danger text-center shadow-sm mb-4">Hubo un error al procesar tu solicitud.</div>
+    <?php elseif (isset($_GET['foro']) && $_GET['foro'] == 'pregunta_ok'): ?>
+        <div class="alert alert-success text-center shadow-sm auto-ocultar mb-4">¡Consulta publicada en el foro!</div>
+    <?php elseif (isset($_GET['mensaje']) && $_GET['mensaje'] == 'borrado'): ?>
+        <div class="alert alert-success text-center shadow-sm auto-ocultar mb-4">¡Consulta eliminada del foro!</div>
     <?php endif; ?>
 
     <!-- Cabecera del Curso -->
@@ -92,7 +96,7 @@ require_once __DIR__ . '/../layouts/navbar.php';
                         <?php if ($preguntas_foro && $preguntas_foro->num_rows > 0): ?>
                             <div class="list-group list-group-flush">
                                 <?php while ($pregunta = $preguntas_foro->fetch_assoc()): ?>
-                                    <a href="pregunta_foro.php?id=<?php echo $pregunta['id_pregunta']; ?>" class="list-group-item list-group-item-action py-3 px-2 border-bottom">
+                                    <a href="index.php?accion=pregunta_foro&id=<?php echo $pregunta['id_pregunta']; ?>" class="list-group-item list-group-item-action py-3 px-2 border-bottom">
                                         <div class="d-flex w-100 justify-content-between align-items-center mb-1">
                                             <h6 class="mb-0 fw-bold text-dark text-truncate pe-2"><?php echo htmlspecialchars($pregunta['titulo']); ?></h6>
                                             <small class="text-muted text-nowrap" style="font-size: 0.75rem;">
@@ -217,7 +221,7 @@ require_once __DIR__ . '/../layouts/navbar.php';
 <div class="modal fade" id="modalPregunta" tabindex="-1" aria-labelledby="modalPreguntaLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content border-0 shadow">
-            <form action="procesar_pregunta.php" method="POST">
+            <form action="index.php?accion=procesar_pregunta" method="POST">
                 <div class="modal-header bg-light border-bottom-0">
                     <h5 class="modal-title text-primario fw-bold" id="modalPreguntaLabel">Hacer una consulta</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>

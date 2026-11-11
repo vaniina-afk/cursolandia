@@ -8,6 +8,8 @@
                 url.searchParams.delete('error');
                 url.searchParams.delete('baja');
                 url.searchParams.delete('borrado');
+                url.searchParams.delete('foro');
+                url.searchParams.delete('mensaje');
                 window.history.replaceState(null, null, url);
             }
 

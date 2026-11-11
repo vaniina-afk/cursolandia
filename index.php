@@ -5,6 +5,7 @@ require_once __DIR__ . '/Backend/Config/conexion.php';
 require_once __DIR__ . '/Backend/Controllers/CursoController.php';
 require_once __DIR__ . '/Backend/Controllers/AuthController.php';
 require_once __DIR__ . '/Backend/Controllers/UsuarioController.php';
+require_once __DIR__ . '/Backend/Controllers/ForoController.php';
 
 $accion = isset($_GET['accion']) ? $_GET['accion'] : 'inicio';
 
@@ -82,6 +83,41 @@ switch ($accion) {
     case 'borrar_material':
         $cursoController = new CursoController($conexion);
         $cursoController->borrarMaterial();
+        break;
+    
+    case 'pregunta_foro':
+        $foroController = new ForoController($conexion);
+        $foroController->verPregunta();
+        break;
+
+    case 'procesar_pregunta':
+        $foroController = new ForoController($conexion);
+        $foroController->crearPregunta();
+        break;
+
+    case 'procesar_respuesta':
+        $foroController = new ForoController($conexion);
+        $foroController->crearRespuesta();
+        break;
+
+    case 'cerrar_pregunta':
+        $foroController = new ForoController($conexion);
+        $foroController->cerrarPregunta();
+        break;
+
+    case 'destacar_respuesta':
+        $foroController = new ForoController($conexion);
+        $foroController->destacarRespuesta();
+        break;
+
+    case 'eliminar_pregunta':
+        $foroController = new ForoController($conexion);
+        $foroController->eliminarPregunta();
+        break;
+
+    case 'eliminar_respuesta':
+        $foroController = new ForoController($conexion);
+        $foroController->eliminarRespuesta();
         break;
     
     case 'inicio':
