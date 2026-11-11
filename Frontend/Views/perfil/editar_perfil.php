@@ -7,7 +7,7 @@ require_once __DIR__ . '/../layouts/navbar.php';
 <div class="container mb-5">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h4 class="fw-bold text-primario mb-0">Configuración de la Cuenta</h4>
-        <a href="panel.php" class="btn btn-outline-secondary btn-sm fw-semibold">← Volver al Panel</a>
+        <a href="index.php?accion=panel" class="btn btn-outline-secondary btn-sm fw-semibold">← Volver al Panel</a>
     </div>
     
     <div class="row g-4">

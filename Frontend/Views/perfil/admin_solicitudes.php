@@ -8,7 +8,7 @@ require_once __DIR__ . '/../layouts/navbar.php';
 <div class="container mb-5">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h3 class="text-primario fw-bold mb-0">Solicitudes PRO Pendientes</h3>
-        <a href="panel.php" class="btn btn-outline-secondary btn-sm fw-semibold">← Volver al Panel</a>
+        <a href="index.php?accion=panel" class="btn btn-outline-secondary btn-sm fw-semibold">← Volver al Panel</a>
     </div>
     
     <?php if (!empty($mensaje_ui)) echo $mensaje_ui; ?>

@@ -38,6 +38,36 @@ switch ($accion) {
         $usuarioController = new UsuarioController($conexion);
         $usuarioController->adminSolicitudes();
         break;
+    
+    case 'panel':
+        $cursoController = new CursoController($conexion);
+        $cursoController->panel();
+        break;
+
+    case 'crear_curso':
+        $cursoController = new CursoController($conexion);
+        $cursoController->crear();
+        break;
+
+    case 'editar_curso':
+        $cursoController = new CursoController($conexion);
+        $cursoController->editar();
+        break;
+
+    case 'borrar_curso':
+        $cursoController = new CursoController($conexion);
+        $cursoController->borrar();
+        break;
+
+    case 'inscribirse':
+        $cursoController = new CursoController($conexion);
+        $cursoController->inscribirse();
+        break;
+
+    case 'dejar_curso':
+        $cursoController = new CursoController($conexion);
+        $cursoController->dejarCurso();
+        break;
 
     case 'inicio':
     default:

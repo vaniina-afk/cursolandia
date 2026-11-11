@@ -6,6 +6,7 @@
                 const url = new URL(window.location.href);
                 url.searchParams.delete('exito');
                 url.searchParams.delete('error');
+                url.searchParams.delete('baja');
                 window.history.replaceState(null, null, url);
             }
 

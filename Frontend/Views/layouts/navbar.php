@@ -55,7 +55,7 @@
                         </ul>
                     </div>
 
-                    <a href="panel.php" class="btn btn-outline-light btn-sm me-2">Mi Panel</a>
+                    <a href="index.php?accion=panel" class="btn btn-outline-light btn-sm me-2">Mi Panel</a>
                     <a href="index.php?accion=logout" class="btn btn-acento btn-sm">Salir</a>
                 </div>
 

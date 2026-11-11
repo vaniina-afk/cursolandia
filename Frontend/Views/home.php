@@ -63,7 +63,7 @@ require_once __DIR__ . '/layouts/navbar.php';
                                 <?php elseif ($curso['cupo'] !== null && $curso['cupo'] <= 0): ?>
                                     <button class="btn btn-danger w-100 btn-sm fw-bold" disabled>Cupo Lleno</button>
                                 <?php else: ?>
-                                    <form action="inscribirse.php" method="POST">
+                                    <form action="index.php?accion=inscribirse" method="POST">
                                         <input type="hidden" name="id_curso" value="<?php echo $curso['id_curso']; ?>">
                                         <button type="submit" class="btn btn-primario w-100 btn-sm fw-bold">Inscribirse</button>
                                     </form>
