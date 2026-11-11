@@ -240,4 +240,122 @@ class CursoController {
         }
         exit();
     }
+
+    // 8. Ver Aula Interna del Curso
+    public function verInterno() {
+        if (!isset($_SESSION['id_usuario']) || !isset($_GET['id'])) {
+            header("Location: index.php?accion=panel");
+            exit();
+        }
+
+        $id_usuario = (int)$_SESSION['id_usuario'];
+        $id_curso = (int)$_GET['id'];
+        $es_admin = (int)$_SESSION['es_admin'];
+
+        $curso = $this->cursoModel->obtenerCursoActivoPorId($id_curso);
+        if (!$curso) {
+            header("Location: index.php?accion=panel&error=inactivo");
+            exit();
+        }
+
+        if (!$this->cursoModel->verificarAccesoCurso($id_curso, $id_usuario, $es_admin, $curso['id_creador'])) {
+            header("Location: index.php?accion=panel");
+            exit();
+        }
+
+        $notis = $this->cargarNotificaciones();
+        $no_leidas = $notis['no_leidas'];
+        $result_noti = $notis['result_noti'];
+
+        $materiales = $this->cursoModel->obtenerMaterialesPorCurso($id_curso);
+        $alumnos = ($curso['id_creador'] == $id_usuario) ? $this->cursoModel->obtenerAlumnosInscriptos($id_curso) : null;
+        $preguntas_foro = $this->cursoModel->obtenerPreguntasForoPorCurso($id_curso);
+
+        require_once __DIR__ . '/../../Frontend/views/cursos/curso_interno.php';
+    }
+
+    // 9. Subir Material de Estudio
+    public function subirMaterial() {
+        if (!isset($_SESSION['id_usuario']) || $_SERVER['REQUEST_METHOD'] != 'POST') {
+            header("Location: index.php?accion=panel");
+            exit();
+        }
+
+        $id_usuario = (int)$_SESSION['id_usuario'];
+        $id_curso = (int)$_POST['id_curso'];
+        $nombre_archivo = trim($_POST['nombre_archivo']);
+
+        if (!$this->cursoModel->esCreadorCurso($id_curso, $id_usuario)) {
+            header("Location: index.php?accion=panel");
+            exit();
+        }
+
+        if (!isset($_FILES['archivo']) || $_FILES['archivo']['error'] !== UPLOAD_ERR_OK) {
+            $cod = $_FILES['archivo']['error'] ?? 'sin_archivo';
+            header("Location: index.php?accion=curso_interno&id=$id_curso&error=subida_$cod");
+            exit();
+        }
+
+        $tamanio_bytes = $_FILES['archivo']['size'];
+        if ($tamanio_bytes > 5242880) {
+            header("Location: index.php?accion=curso_interno&id=$id_curso&error=tamanio");
+            exit();
+        }
+
+        $tamanio_mb = round($tamanio_bytes / 1048576, 2);
+        $extension = pathinfo($_FILES['archivo']['name'], PATHINFO_EXTENSION);
+        $nombre_unico = "mat_" . $id_curso . "_" . time() . "_" . uniqid() . "." . $extension;
+
+        $carpeta_destino = "uploads/";
+        if (!is_dir($carpeta_destino)) {
+            mkdir($carpeta_destino, 0777, true);
+        }
+        $ruta_destino = $carpeta_destino . $nombre_unico;
+
+        if (!move_uploaded_file($_FILES['archivo']['tmp_name'], $ruta_destino)) {
+            header("Location: index.php?accion=curso_interno&id=$id_curso&error=mover");
+            exit();
+        }
+
+        if (!$this->cursoModel->agregarMaterial($id_curso, $nombre_archivo, $nombre_unico, $tamanio_mb)) {
+            if (file_exists($ruta_destino)) {
+                unlink($ruta_destino);
+            }
+            header("Location: index.php?accion=curso_interno&id=$id_curso&error=bd");
+            exit();
+        }
+
+        header("Location: index.php?accion=curso_interno&id=$id_curso&exito=1");
+        exit();
+    }
+
+    // 10. Borrar Material de Estudio
+    public function borrarMaterial() {
+        if (!isset($_SESSION['id_usuario']) || !isset($_GET['id_mat']) || !isset($_GET['id_curso'])) {
+            header("Location: index.php?accion=panel");
+            exit();
+        }
+
+        $id_usuario = (int)$_SESSION['id_usuario'];
+        $id_material = (int)$_GET['id_mat'];
+        $id_curso = (int)$_GET['id_curso'];
+
+        if ($this->cursoModel->esCreadorCurso($id_curso, $id_usuario)) {
+            $material = $this->cursoModel->obtenerMaterialPorIdYCurso($id_material, $id_curso);
+
+            if ($material) {
+                $ruta_fisica = "uploads/" . $material['ruta_archivo'];
+                if (file_exists($ruta_fisica)) {
+                    unlink($ruta_fisica);
+                }
+
+                $this->cursoModel->eliminarMaterial($id_material);
+                header("Location: index.php?accion=curso_interno&id=$id_curso&borrado=1");
+                exit();
+            }
+        }
+
+        header("Location: index.php?accion=curso_interno&id=$id_curso");
+        exit();
+    }
 }

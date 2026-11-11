@@ -7,6 +7,7 @@
                 url.searchParams.delete('exito');
                 url.searchParams.delete('error');
                 url.searchParams.delete('baja');
+                url.searchParams.delete('borrado');
                 window.history.replaceState(null, null, url);
             }
 

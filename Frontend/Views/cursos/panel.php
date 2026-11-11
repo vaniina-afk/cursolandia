@@ -46,7 +46,7 @@ require_once __DIR__ . '/../layouts/navbar.php';
 
                             <?php if ($curso['activo'] == 1): ?>
                                 <div class="d-flex flex-column gap-1 text-end">
-                                    <a href="curso_interno.php?id=<?php echo $curso['id_curso']; ?>" class="btn btn-sm btn-acento fw-bold">Entrar</a>
+                                    <a href="index.php?accion=curso_interno&id=<?php echo $curso['id_curso']; ?>" class="btn btn-sm btn-acento fw-bold">Entrar</a>
                                     <a href="index.php?accion=dejar_curso&id=<?php echo $curso['id_curso']; ?>" class="btn btn-sm btn-outline-danger fw-bold" style="font-size: 0.75rem;" onclick="return confirm('¿Seguro que querés abandonar este curso?');">Dejar curso</a>
                                 </div>
                             <?php else: ?>
@@ -82,7 +82,7 @@ require_once __DIR__ . '/../layouts/navbar.php';
                             <div class="d-flex justify-content-between align-items-center">
                                 <small class="text-muted">Inicio: <?php echo date("d/m/Y", strtotime($creado['fecha_inicio'])); ?></small>
                                 <div>
-                                    <a href="curso_interno.php?id=<?php echo $creado['id_curso']; ?>" class="btn btn-sm btn-outline-primary fw-bold" style="font-size: 0.75rem;">Ver Aula</a>
+                                    <a href="index.php?accion=curso_interno&id=<?php echo $creado['id_curso']; ?>" class="btn btn-sm btn-outline-primary fw-bold" style="font-size: 0.75rem;">Ver Aula</a>
                                     <a href="index.php?accion=editar_curso&id=<?php echo $creado['id_curso']; ?>" class="btn btn-sm btn-outline-secondary fw-bold" style="font-size: 0.75rem;">Editar</a>
                                     <a href="index.php?accion=borrar_curso&id=<?php echo $creado['id_curso']; ?>" class="btn btn-sm btn-outline-danger fw-bold" style="font-size: 0.75rem;" onclick="return confirm('¿Estás seguro de que querés borrar este curso?');">Borrar</a>
                                 </div>

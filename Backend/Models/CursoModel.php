@@ -203,4 +203,110 @@ class CursoModel {
 
         return true;
     }
+
+    // --- MÉTODOS PARA EL AULA INTERNA Y MATERIALES ---
+
+    public function obtenerCursoActivoPorId($id_curso) {
+        $stmt = $this->conexion->prepare("SELECT c.*, u.nombre AS prof_nombre, u.apellido AS prof_apellido 
+                                          FROM Cursos c 
+                                          JOIN Usuarios u ON c.id_creador = u.id_usuario 
+                                          WHERE c.id_curso = ? AND c.activo = 1");
+        $stmt->bind_param("i", $id_curso);
+        $stmt->execute();
+        $curso = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        return $curso;
+    }
+
+    public function verificarAccesoCurso($id_curso, $id_usuario, $es_admin, $id_creador) {
+        if ($id_creador == $id_usuario || $es_admin == 1) {
+            return true;
+        }
+
+        $stmt = $this->conexion->prepare("SELECT id_inscripcion FROM Inscripciones 
+                                          WHERE id_curso = ? AND id_usuario = ? AND estado = 'Aceptado'");
+        $stmt->bind_param("ii", $id_curso, $id_usuario);
+        $stmt->execute();
+        $tiene_acceso = $stmt->get_result()->num_rows > 0;
+        $stmt->close();
+
+        return $tiene_acceso;
+    }
+
+    public function obtenerMaterialesPorCurso($id_curso) {
+        $stmt = $this->conexion->prepare("SELECT * FROM Materiales WHERE id_curso = ?");
+        $stmt->bind_param("i", $id_curso);
+        $stmt->execute();
+        $resultado = $stmt->get_result();
+        $stmt->close();
+
+        return $resultado;
+    }
+
+    public function obtenerAlumnosInscriptos($id_curso) {
+        $stmt = $this->conexion->prepare("SELECT u.nombre, u.apellido, u.email, u.imagen_perfil 
+                                          FROM Inscripciones i
+                                          JOIN Usuarios u ON i.id_usuario = u.id_usuario
+                                          WHERE i.id_curso = ? AND i.estado = 'Aceptado'");
+        $stmt->bind_param("i", $id_curso);
+        $stmt->execute();
+        $resultado = $stmt->get_result();
+        $stmt->close();
+
+        return $resultado;
+    }
+
+    public function obtenerPreguntasForoPorCurso($id_curso) {
+        $stmt = $this->conexion->prepare("SELECT p.*, u.nombre, u.apellido 
+                                          FROM preguntas p 
+                                          JOIN Usuarios u ON p.id_usuario = u.id_usuario 
+                                          WHERE p.id_curso = ? 
+                                          ORDER BY p.fecha_creacion DESC");
+        $stmt->bind_param("i", $id_curso);
+        $stmt->execute();
+        $resultado = $stmt->get_result();
+        $stmt->close();
+
+        return $resultado;
+    }
+
+    public function esCreadorCurso($id_curso, $id_usuario) {
+        $stmt = $this->conexion->prepare("SELECT id_curso FROM Cursos WHERE id_curso = ? AND id_creador = ?");
+        $stmt->bind_param("ii", $id_curso, $id_usuario);
+        $stmt->execute();
+        $es_creador = $stmt->get_result()->num_rows > 0;
+        $stmt->close();
+
+        return $es_creador;
+    }
+
+    public function agregarMaterial($id_curso, $nombre_archivo, $ruta_archivo, $tamanio_mb) {
+        $stmt = $this->conexion->prepare("INSERT INTO Materiales (id_curso, nombre_archivo, ruta_archivo, tamanio_mb) 
+                                          VALUES (?, ?, ?, ?)");
+        $stmt->bind_param("issd", $id_curso, $nombre_archivo, $ruta_archivo, $tamanio_mb);
+        $exito = $stmt->execute();
+        $stmt->close();
+
+        return $exito;
+    }
+
+    public function obtenerMaterialPorIdYCurso($id_material, $id_curso) {
+        $stmt = $this->conexion->prepare("SELECT ruta_archivo FROM Materiales WHERE id_material = ? AND id_curso = ?");
+        $stmt->bind_param("ii", $id_material, $id_curso);
+        $stmt->execute();
+        $material = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        return $material;
+    }
+
+    public function eliminarMaterial($id_material) {
+        $stmt = $this->conexion->prepare("DELETE FROM Materiales WHERE id_material = ?");
+        $stmt->bind_param("i", $id_material);
+        $exito = $stmt->execute();
+        $stmt->close();
+
+        return $exito;
+    }
 }

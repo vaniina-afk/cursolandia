@@ -68,7 +68,22 @@ switch ($accion) {
         $cursoController = new CursoController($conexion);
         $cursoController->dejarCurso();
         break;
+    
+    case 'curso_interno':
+        $cursoController = new CursoController($conexion);
+        $cursoController->verInterno();
+        break;
 
+    case 'subir_material':
+        $cursoController = new CursoController($conexion);
+        $cursoController->subirMaterial();
+        break;
+
+    case 'borrar_material':
+        $cursoController = new CursoController($conexion);
+        $cursoController->borrarMaterial();
+        break;
+    
     case 'inicio':
     default:
         $cursoController = new CursoController($conexion);
