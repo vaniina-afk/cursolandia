@@ -57,6 +57,24 @@ require_once __DIR__ . '/../layouts/navbar.php';
                             <textarea name="antecedentes" class="form-control bg-light" rows="4" placeholder="Contale a tus alumnos sobre tu trayectoria, estudios o experiencia laboral..."><?php echo htmlspecialchars($datos_usuario['antecedentes'] ?? ''); ?></textarea>
                         </div>
 
+                        <div class="mb-4">
+                            <label class="form-label small fw-bold">Mis Intereses <span class="text-muted fw-normal">(Para recomendarte cursos)</span></label>
+                            <div class="d-flex flex-wrap gap-3 mb-2 p-3 border rounded bg-light">
+                                <?php if (isset($intereses_disponibles) && $intereses_disponibles): ?>
+                                    <?php while ($int = $intereses_disponibles->fetch_assoc()): ?>
+                                        <?php $checked = in_array((int)$int['id_interes'], $intereses_usuario ?? []) ? 'checked' : ''; ?>
+                                        <div class="form-check m-0">
+                                            <input class="form-check-input" type="checkbox" name="intereses[]" value="<?php echo $int['id_interes']; ?>" id="int_<?php echo $int['id_interes']; ?>" <?php echo $checked; ?>>
+                                            <label class="form-check-label small" for="int_<?php echo $int['id_interes']; ?>">
+                                                <?php echo htmlspecialchars($int['nombre']); ?>
+                                            </label>
+                                        </div>
+                                    <?php endwhile; ?>
+                                <?php endif; ?>
+                            </div>
+                            <input type="text" name="nuevos_intereses" class="form-control form-control-sm" placeholder="¿Tenés otros intereses? Escribilos separados por coma">
+                        </div>
+
                         <button type="submit" class="btn btn-primario w-100 fw-bold">Guardar Cambios de Perfil</button>
                     </form>
                 </div>

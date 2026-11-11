@@ -26,6 +26,24 @@ require_once __DIR__ . '/../layouts/navbar.php';
                             <label class="form-label text-secondary fw-semibold small mb-1">Descripción</label>
                             <textarea name="descripcion" class="form-control form-control-sm" rows="3" required><?php echo htmlspecialchars($curso['descripcion']); ?></textarea>
                         </div>
+
+                        <div class="mb-3">
+                            <label class="form-label text-secondary fw-semibold small mb-1">Etiquetas del Curso</label>
+                            <div class="d-flex flex-wrap gap-3 mb-2 p-2 border rounded bg-light">
+                                <?php if (isset($etiquetas_disponibles) && $etiquetas_disponibles): ?>
+                                    <?php while ($et = $etiquetas_disponibles->fetch_assoc()): ?>
+                                        <?php $checked = in_array((int)$et['id_etiqueta'], $etiquetas_curso ?? []) ? 'checked' : ''; ?>
+                                        <div class="form-check m-0">
+                                            <input class="form-check-input" type="checkbox" name="etiquetas[]" value="<?php echo $et['id_etiqueta']; ?>" id="et_<?php echo $et['id_etiqueta']; ?>" <?php echo $checked; ?>>
+                                            <label class="form-check-label small" for="et_<?php echo $et['id_etiqueta']; ?>">
+                                                <?php echo htmlspecialchars($et['nombre']); ?>
+                                            </label>
+                                        </div>
+                                    <?php endwhile; ?>
+                                <?php endif; ?>
+                            </div>
+                            <input type="text" name="nuevas_etiquetas" class="form-control form-control-sm" placeholder="Agregar nuevas etiquetas separadas por coma">
+                        </div>
                         
                         <div class="row mb-3">
                             <div class="col">

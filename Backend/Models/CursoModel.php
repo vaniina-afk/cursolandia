@@ -7,14 +7,46 @@ class CursoModel {
     }
 
     // --- MÉTODOS PARA EL CATÁLOGO (INICIO) ---
+    public function obtenerCursosActivos($id_usuario = 0, $busqueda = '', $id_etiqueta = 0) {
+        $sql = "SELECT c.*, u.nombre, u.apellido, u.plan_pro,
+                       GROUP_CONCAT(DISTINCT e.nombre ORDER BY e.nombre SEPARATOR ', ') AS lista_etiquetas,
+                       COUNT(DISTINCT ui.id_interes) AS coincidencias_interes
+                FROM Cursos c
+                JOIN Usuarios u ON c.id_creador = u.id_usuario
+                LEFT JOIN curso_etiqueta ce ON c.id_curso = ce.id_curso
+                LEFT JOIN etiquetas e ON ce.id_etiqueta = e.id_etiqueta
+                LEFT JOIN intereses i ON LOWER(TRIM(e.nombre)) = LOWER(TRIM(i.nombre))
+                LEFT JOIN usuario_interes ui ON i.id_interes = ui.id_interes AND ui.id_usuario = ?
+                WHERE c.activo = 1";
 
-    public function obtenerCursosActivos() {
-        $sql = "SELECT c.*, u.nombre, u.apellido 
-                FROM Cursos c 
-                JOIN Usuarios u ON c.id_creador = u.id_usuario 
-                WHERE c.activo = 1 
-                ORDER BY c.fecha_inicio DESC";
-        return $this->conexion->query($sql);
+        $tipos = "i";
+        $params = [$id_usuario];
+
+        if ($busqueda !== '') {
+            $sql .= " AND c.titulo LIKE ?";
+            $tipos .= "s";
+            $params[] = '%' . $busqueda . '%';
+        }
+
+        if ($id_etiqueta > 0) {
+            $sql .= " AND EXISTS (
+                        SELECT 1 FROM curso_etiqueta ce2 
+                        WHERE ce2.id_curso = c.id_curso AND ce2.id_etiqueta = ?
+                      )";
+            $tipos .= "i";
+            $params[] = $id_etiqueta;
+        }
+
+        $sql .= " GROUP BY c.id_curso
+                  ORDER BY u.plan_pro DESC, coincidencias_interes DESC, c.id_curso DESC";
+
+        $stmt = $this->conexion->prepare($sql);
+        $stmt->bind_param($tipos, ...$params);
+        $stmt->execute();
+        $resultado = $stmt->get_result();
+        $stmt->close();
+
+        return $resultado;
     }
 
     public function obtenerIdsCursosInscriptos($id_usuario) {
@@ -88,9 +120,10 @@ class CursoModel {
                                           VALUES (?, ?, ?, ?, ?, ?, ?)");
         $stmt->bind_param("issdiss", $id_creador, $titulo, $descripcion, $costo, $cupo, $fecha_inicio, $fecha_fin);
         $exito = $stmt->execute();
+        $id_nuevo = $exito ? $this->conexion->insert_id : false;
         $stmt->close();
 
-        return $exito;
+        return $id_nuevo;
     }
 
     public function obtenerCursoPorIdYCreador($id_curso, $id_creador) {
@@ -308,5 +341,74 @@ class CursoModel {
         $stmt->close();
 
         return $exito;
+    }
+
+    // --- MÉTODOS PARA ETIQUETAS DE CURSOS ---
+
+    public function obtenerTodasLasEtiquetas() {
+        $sql = "SELECT id_etiqueta, nombre FROM etiquetas ORDER BY nombre ASC";
+        return $this->conexion->query($sql);
+    }
+
+    public function obtenerIdsEtiquetasPorCurso($id_curso) {
+        $ids = [];
+        $stmt = $this->conexion->prepare("SELECT id_etiqueta FROM curso_etiqueta WHERE id_curso = ?");
+        $stmt->bind_param("i", $id_curso);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        while ($fila = $res->fetch_assoc()) {
+            $ids[] = (int)$fila['id_etiqueta'];
+        }
+        $stmt->close();
+        return $ids;
+    }
+
+    public function guardarEtiquetasCurso($id_curso, $ids_etiquetas = [], $nuevas_etiquetas_texto = '') {
+        // 1. Limpiamos asignaciones previas
+        $stmt_del = $this->conexion->prepare("DELETE FROM curso_etiqueta WHERE id_curso = ?");
+        $stmt_del->bind_param("i", $id_curso);
+        $stmt_del->execute();
+        $stmt_del->close();
+
+        $ids_finales = array_map('intval', $ids_etiquetas);
+
+        // 2. Si el profesor escribió etiquetas nuevas separadas por coma, las creamos si no existen
+        if (trim($nuevas_etiquetas_texto) !== '') {
+            $partes = explode(',', $nuevas_etiquetas_texto);
+            foreach ($partes as $nombre_raw) {
+                $nombre = trim($nombre_raw);
+                if ($nombre === '') continue;
+
+                $stmt_busca = $this->conexion->prepare("SELECT id_etiqueta FROM etiquetas WHERE LOWER(nombre) = LOWER(?)");
+                $stmt_busca->bind_param("s", $nombre);
+                $stmt_busca->execute();
+                $existente = $stmt_busca->get_result()->fetch_assoc();
+                $stmt_busca->close();
+
+                if ($existente) {
+                    $ids_finales[] = (int)$existente['id_etiqueta'];
+                } else {
+                    $stmt_ins_et = $this->conexion->prepare("INSERT INTO etiquetas (nombre) VALUES (?)");
+                    $stmt_ins_et->bind_param("s", $nombre);
+                    if ($stmt_ins_et->execute()) {
+                        $ids_finales[] = (int)$this->conexion->insert_id;
+                    }
+                    $stmt_ins_et->close();
+                }
+            }
+        }
+
+        // 3. Insertamos en la tabla intermedia curso_etiqueta sin duplicados
+        $ids_finales = array_unique($ids_finales);
+        if (!empty($ids_finales)) {
+            $stmt_ce = $this->conexion->prepare("INSERT INTO curso_etiqueta (id_curso, id_etiqueta) VALUES (?, ?)");
+            foreach ($ids_finales as $id_et) {
+                if ($id_et > 0) {
+                    $stmt_ce->bind_param("ii", $id_curso, $id_et);
+                    $stmt_ce->execute();
+                }
+            }
+            $stmt_ce->close();
+        }
     }
 }

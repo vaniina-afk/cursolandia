@@ -142,4 +142,96 @@ class UsuarioModel {
 
         return $exito;
     }
+
+    // --- MÉTODOS PARA INTERESES DEL USUARIO ---
+
+    public function obtenerTodosLosIntereses() {
+        $sql = "SELECT id_interes, nombre FROM intereses ORDER BY nombre ASC";
+        return $this->conexion->query($sql);
+    }
+
+    public function obtenerIdsInteresesUsuario($id_usuario) {
+        $ids = [];
+        $stmt = $this->conexion->prepare("SELECT id_interes FROM usuario_interes WHERE id_usuario = ?");
+        $stmt->bind_param("i", $id_usuario);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        while ($fila = $res->fetch_assoc()) {
+            $ids[] = (int)$fila['id_interes'];
+        }
+        $stmt->close();
+        return $ids;
+    }
+
+    public function guardarInteresesUsuario($id_usuario, $ids_intereses = [], $nuevos_intereses_texto = '') {
+        // 1. Limpiamos intereses previos del usuario
+        $stmt_del = $this->conexion->prepare("DELETE FROM usuario_interes WHERE id_usuario = ?");
+        $stmt_del->bind_param("i", $id_usuario);
+        $stmt_del->execute();
+        $stmt_del->close();
+
+        $ids_finales = array_map('intval', $ids_intereses);
+
+        // 2. Si escribió intereses nuevos separados por coma, los creamos si no existen
+        if (trim($nuevos_intereses_texto) !== '') {
+            $partes = explode(',', $nuevos_intereses_texto);
+            foreach ($partes as $nombre_raw) {
+                $nombre = trim($nombre_raw);
+                if ($nombre === '') continue;
+
+                $stmt_busca = $this->conexion->prepare("SELECT id_interes FROM intereses WHERE LOWER(nombre) = LOWER(?)");
+                $stmt_busca->bind_param("s", $nombre);
+                $stmt_busca->execute();
+                $existente = $stmt_busca->get_result()->fetch_assoc();
+                $stmt_busca->close();
+
+                if ($existente) {
+                    $ids_finales[] = (int)$existente['id_interes'];
+                } else {
+                    $stmt_ins = $this->conexion->prepare("INSERT INTO intereses (nombre) VALUES (?)");
+                    $stmt_ins->bind_param("s", $nombre);
+                    if ($stmt_ins->execute()) {
+                        $ids_finales[] = (int)$this->conexion->insert_id;
+                    }
+                    $stmt_ins->close();
+                }
+            }
+        }
+
+        // 3. Guardamos en usuario_interes sin duplicados
+        $ids_finales = array_unique($ids_finales);
+        if (!empty($ids_finales)) {
+            $stmt_ui = $this->conexion->prepare("INSERT INTO usuario_interes (id_usuario, id_interes) VALUES (?, ?)");
+            foreach ($ids_finales as $id_int) {
+                if ($id_int > 0) {
+                    $stmt_ui->bind_param("ii", $id_usuario, $id_int);
+                    $stmt_ui->execute();
+                }
+            }
+            $stmt_ui->close();
+        }
+    }
+
+    // --- NOTIFICACIONES PARA SOLICITUDES PRO ---
+
+    public function notificarAdministradores($mensaje, $enlace) {
+        $res_admins = $this->conexion->query("SELECT id_usuario FROM Usuarios WHERE es_admin = 1");
+        if ($res_admins && $res_admins->num_rows > 0) {
+            $stmt = $this->conexion->prepare("INSERT INTO notificaciones (id_usuario, mensaje, enlace, leida) VALUES (?, ?, ?, 0)");
+            while ($admin = $res_admins->fetch_assoc()) {
+                $id_admin = (int)$admin['id_usuario'];
+                $stmt->bind_param("iss", $id_admin, $mensaje, $enlace);
+                $stmt->execute();
+            }
+            $stmt->close();
+        }
+    }
+
+    public function notificarUsuario($id_usuario_destino, $mensaje, $enlace) {
+        $stmt = $this->conexion->prepare("INSERT INTO notificaciones (id_usuario, mensaje, enlace, leida) VALUES (?, ?, ?, 0)");
+        $stmt->bind_param("iss", $id_usuario_destino, $mensaje, $enlace);
+        $exito = $stmt->execute();
+        $stmt->close();
+        return $exito;
+    }
 }

@@ -76,6 +76,9 @@ class UsuarioController {
 
                 if ($this->usuarioModel->actualizarPerfil($id_usuario, $nombre, $apellido, $email, $antecedentes, $nueva_imagen)) {
                     $_SESSION['nombre'] = $nombre;
+                    $ids_intereses = $_POST['intereses'] ?? [];
+                    $nuevos_intereses = $_POST['nuevos_intereses'] ?? '';
+                    $this->usuarioModel->guardarInteresesUsuario($id_usuario, $ids_intereses, $nuevos_intereses);
                     if (empty($mensaje_perfil)) {
                         $mensaje_perfil = "<div class='alert alert-success p-2 small mb-3 auto-ocultar'>Datos del perfil actualizados correctamente.</div>";
                     }
@@ -108,6 +111,8 @@ class UsuarioController {
         }
 
         $datos_usuario = $this->usuarioModel->obtenerPorId($id_usuario);
+        $intereses_disponibles = $this->usuarioModel->obtenerTodosLosIntereses();
+        $intereses_usuario = $this->usuarioModel->obtenerIdsInteresesUsuario($id_usuario);
         require_once __DIR__ . '/../../Frontend/views/perfil/editar_perfil.php';
     }
 
@@ -150,6 +155,12 @@ class UsuarioController {
                     if ($this->usuarioModel->crearSolicitudPro($id_usuario, $mensaje_texto, $nombre_imagen)) {
                         $mensaje_ui = "<div class='alert alert-success p-3 text-center shadow-sm'>¡Solicitud enviada con éxito! Un administrador la revisará pronto.</div>";
                         $puede_solicitar = false;
+                        $solicitante = $this->usuarioModel->obtenerPorId($id_usuario);
+                        $nombre_completo = $solicitante['nombre'] . ' ' . $solicitante['apellido'];
+                        $this->usuarioModel->notificarAdministradores(
+                            "⭐ $nombre_completo ha enviado una solicitud para obtener el Plan PRO.",
+                            "index.php?accion=admin_solicitudes"
+                        );
                     } else {
                         $mensaje_ui = "<div class='alert alert-danger p-2 small mb-3'>Error al guardar la solicitud en la base de datos.</div>";
                     }
@@ -181,9 +192,11 @@ class UsuarioController {
 
             if ($decision == 'aprobar') {
                 $this->usuarioModel->aprobarSolicitudPro($id_solicitud, $id_user_solicitante);
+                $this->usuarioModel->notificarUsuario($id_user_solicitante, "🎉 ¡Tu solicitud de Plan PRO fue aprobada! Ya podés crear cursos ilimitados y destacar en el catálogo.", "index.php?accion=panel");
                 $mensaje_ui = "<div class='alert alert-success p-2 small mb-3 auto-ocultar'>Solicitud aprobada. El usuario ahora es PRO.</div>";
             } elseif ($decision == 'rechazar') {
                 $this->usuarioModel->rechazarSolicitudPro($id_solicitud);
+                $this->usuarioModel->notificarUsuario($id_user_solicitante, "😔 Tu solicitud de Plan PRO fue rechazada.", "index.php?accion=panel");
                 $mensaje_ui = "<div class='alert alert-secondary p-2 small mb-3 auto-ocultar'>Solicitud rechazada.</div>";
             }
         }

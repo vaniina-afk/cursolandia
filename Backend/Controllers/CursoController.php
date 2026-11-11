@@ -29,13 +29,17 @@ class CursoController {
 
     // 1. Pantalla principal (Inicio)
     public function index() {
-        $resultado_cursos = $this->cursoModel->obtenerCursosActivos();
+        $id_usuario = isset($_SESSION['id_usuario']) ? (int)$_SESSION['id_usuario'] : 0;
+        $busqueda = isset($_GET['buscar']) ? trim($_GET['buscar']) : '';
+        $etiqueta_filtro = isset($_GET['etiqueta']) ? (int)$_GET['etiqueta'] : 0;
+
+        $resultado_cursos = $this->cursoModel->obtenerCursosActivos($id_usuario, $busqueda, $etiqueta_filtro);
+        $etiquetas_filtro = $this->cursoModel->obtenerTodasLasEtiquetas();
         $inscripciones = [];
         $no_leidas = 0;
         $result_noti = null;
 
-        if (isset($_SESSION['id_usuario'])) {
-            $id_usuario = (int)$_SESSION['id_usuario'];
+        if ($id_usuario > 0) {
             $inscripciones = $this->cursoModel->obtenerIdsCursosInscriptos($id_usuario);
             $notis = $this->cargarNotificaciones();
             $no_leidas = $notis['no_leidas'];
@@ -86,7 +90,7 @@ class CursoController {
 
         $mensaje = "";
         $es_pro = $this->cursoModel->esUsuarioPro($id_usuario);
-        $_SESSION['plan_pro'] = $es_pro; // Sincronizamos por si el admin lo acaba de aprobar
+        $_SESSION['plan_pro'] = $es_pro;
         $total_cursos = $this->cursoModel->contarCursosActivosCreados($id_usuario);
 
         $puede_crear = true;
@@ -106,7 +110,13 @@ class CursoController {
             if ($fecha_fin < $fecha_inicio) {
                 $mensaje = "<div class='alert alert-danger p-2 small mb-3'>La fecha de fin no puede ser anterior a la de inicio.</div>";
             } else {
-                if ($this->cursoModel->crearCurso($id_usuario, $titulo, $descripcion, $costo, $cupo, $fecha_inicio, $fecha_fin)) {
+                $id_curso_nuevo = $this->cursoModel->crearCurso($id_usuario, $titulo, $descripcion, $costo, $cupo, $fecha_inicio, $fecha_fin);
+                
+                if ($id_curso_nuevo) {
+                    $ids_etiquetas = $_POST['etiquetas'] ?? [];
+                    $nuevas_etiquetas = $_POST['nuevas_etiquetas'] ?? '';
+                    $this->cursoModel->guardarEtiquetasCurso($id_curso_nuevo, $ids_etiquetas, $nuevas_etiquetas);
+
                     $total_cursos++;
                     if ($total_cursos >= 3 && $es_pro == 0) {
                         $puede_crear = false;
@@ -122,6 +132,7 @@ class CursoController {
             }
         }
 
+        $etiquetas_disponibles = $this->cursoModel->obtenerTodasLasEtiquetas();
         require_once __DIR__ . '/../../Frontend/views/cursos/crear_curso.php';
     }
 
@@ -167,6 +178,10 @@ class CursoController {
 
                 if (!$error_cupo) {
                     if ($this->cursoModel->actualizarCurso($id_curso, $id_usuario, $titulo, $descripcion, $costo, $cupo_final, $fecha_inicio, $fecha_fin)) {
+                        $ids_etiquetas = $_POST['etiquetas'] ?? [];
+                        $nuevas_etiquetas = $_POST['nuevas_etiquetas'] ?? '';
+                        $this->cursoModel->guardarEtiquetasCurso($id_curso, $ids_etiquetas, $nuevas_etiquetas);
+
                         $mensaje = "<div class='alert alert-success p-2 small mb-3 auto-ocultar'>¡Curso actualizado con éxito!</div>";
                     } else {
                         $mensaje = "<div class='alert alert-danger p-2 small mb-3'>Error al actualizar el curso.</div>";
@@ -183,6 +198,9 @@ class CursoController {
 
         $inscriptos_actuales = $this->cursoModel->contarInscriptosAceptados($id_curso);
         $cupo_mostrar = ($curso['cupo'] !== null) ? ($curso['cupo'] + $inscriptos_actuales) : '';
+
+        $etiquetas_disponibles = $this->cursoModel->obtenerTodasLasEtiquetas();
+        $etiquetas_curso = $this->cursoModel->obtenerIdsEtiquetasPorCurso($id_curso);
 
         require_once __DIR__ . '/../../Frontend/views/cursos/editar_curso.php';
     }
