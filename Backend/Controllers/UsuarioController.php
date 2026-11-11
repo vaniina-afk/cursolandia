@@ -12,14 +12,18 @@ class UsuarioController {
 
     // Carga las variables de la campanita de notificaciones (puente temporal)
     private function cargarNotificaciones() {
-        $conexion = $this->conexion;
-        $id_usuario = (int)$_SESSION['id_usuario'];
-        if (file_exists(__DIR__ . '/../../includes/logica_notificaciones.php')) {
-            require_once __DIR__ . '/../../includes/logica_notificaciones.php';
+        if (isset($_SESSION['id_usuario'])) {
+            require_once __DIR__ . '/../Models/NotificacionModel.php';
+            $notiModel = new NotificacionModel($this->conexion);
+            $id_usuario = (int)$_SESSION['id_usuario'];
+            return [
+                'no_leidas' => $notiModel->contarNoLeidas($id_usuario),
+                'result_noti' => $notiModel->obtenerUltimasPorUsuario($id_usuario, 5)
+            ];
         }
         return [
-            'no_leidas' => $no_leidas ?? 0,
-            'result_noti' => $result_noti ?? null
+            'no_leidas' => 0,
+            'result_noti' => null
         ];
     }
 

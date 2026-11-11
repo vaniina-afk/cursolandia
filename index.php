@@ -6,6 +6,7 @@ require_once __DIR__ . '/Backend/Controllers/CursoController.php';
 require_once __DIR__ . '/Backend/Controllers/AuthController.php';
 require_once __DIR__ . '/Backend/Controllers/UsuarioController.php';
 require_once __DIR__ . '/Backend/Controllers/ForoController.php';
+require_once __DIR__ . '/Backend/Controllers/NotificacionController.php';
 
 $accion = isset($_GET['accion']) ? $_GET['accion'] : 'inicio';
 
@@ -120,6 +121,16 @@ switch ($accion) {
         $foroController->eliminarRespuesta();
         break;
     
+    case 'notificaciones':
+        $notificacionController = new NotificacionController($conexion);
+        $notificacionController->index();
+        break;
+
+    case 'leer_notificacion':
+        $notificacionController = new NotificacionController($conexion);
+        $notificacionController->leer();
+        break;
+
     case 'inicio':
     default:
         $cursoController = new CursoController($conexion);

@@ -22,7 +22,7 @@
                         <?php if (isset($result_noti) && $result_noti->num_rows > 0): ?>
                             <?php while($noti = $result_noti->fetch_assoc()): ?>
                                 <li>
-                                    <a class="dropdown-item py-3 border-bottom text-wrap <?php echo ($noti['leida'] == 0) ? 'bg-light' : ''; ?>" href="leer_notificacion.php?id=<?php echo $noti['id_notificacion']; ?>">
+                                    <a class="dropdown-item py-3 border-bottom text-wrap <?php echo ($noti['leida'] == 0) ? 'bg-light' : ''; ?>" href="index.php?accion=leer_notificacion&id=<?php echo $noti['id_notificacion']; ?>">
                                         <div class="d-flex flex-column gap-1">
                                             <span class="small" style="line-height: 1.2;"><?php echo htmlspecialchars($noti['mensaje']); ?></span>
                                             <small class="text-primario fw-bold" style="font-size: 0.7rem;">
@@ -32,7 +32,7 @@
                                     </a>
                                 </li>
                             <?php endwhile; ?>
-                            <li><a class="dropdown-item text-center small text-muted py-2" href="notificaciones.php">Ver todas</a></li>
+                            <li><a class="dropdown-item text-center small text-muted py-2" href="index.php?accion=notificaciones">Ver todas</a></li>
                         <?php else: ?>
                             <li><span class="dropdown-item text-muted small text-center py-3">No tenés notificaciones nuevas.</span></li>
                         <?php endif; ?>
