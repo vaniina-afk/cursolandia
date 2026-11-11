@@ -39,4 +39,107 @@ class UsuarioModel {
 
         return $exito;
     }
+
+    // Obtiene los datos completos de un usuario por su ID
+    public function obtenerPorId($id_usuario) {
+        $stmt = $this->conexion->prepare("SELECT id_usuario, nombre, apellido, email, antecedentes, imagen_perfil, plan_pro FROM Usuarios WHERE id_usuario = ?");
+        $stmt->bind_param("i", $id_usuario);
+        $stmt->execute();
+        $usuario = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        return $usuario;
+    }
+
+    // Actualiza datos personales (con o sin cambio de foto de perfil)
+    public function actualizarPerfil($id_usuario, $nombre, $apellido, $email, $antecedentes, $nueva_imagen = null) {
+        if ($nueva_imagen !== null) {
+            $stmt = $this->conexion->prepare("UPDATE Usuarios SET nombre = ?, apellido = ?, email = ?, antecedentes = ?, imagen_perfil = ? WHERE id_usuario = ?");
+            $stmt->bind_param("sssssi", $nombre, $apellido, $email, $antecedentes, $nueva_imagen, $id_usuario);
+        } else {
+            $stmt = $this->conexion->prepare("UPDATE Usuarios SET nombre = ?, apellido = ?, email = ?, antecedentes = ? WHERE id_usuario = ?");
+            $stmt->bind_param("ssssi", $nombre, $apellido, $email, $antecedentes, $id_usuario);
+        }
+
+        $exito = $stmt->execute();
+        $stmt->close();
+        return $exito;
+    }
+
+    // Obtiene el hash de la contraseña actual para validarla
+    public function obtenerPasswordHash($id_usuario) {
+        $stmt = $this->conexion->prepare("SELECT contrasena FROM Usuarios WHERE id_usuario = ?");
+        $stmt->bind_param("i", $id_usuario);
+        $stmt->execute();
+        $fila = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        return $fila ? $fila['contrasena'] : null;
+    }
+
+    // Actualiza la contraseña encriptada
+    public function actualizarPassword($id_usuario, $hash_nuevo) {
+        $stmt = $this->conexion->prepare("UPDATE Usuarios SET contrasena = ? WHERE id_usuario = ?");
+        $stmt->bind_param("si", $hash_nuevo, $id_usuario);
+        $exito = $stmt->execute();
+        $stmt->close();
+
+        return $exito;
+    }
+
+    // Verifica si el usuario ya tiene una solicitud PRO en estado Pendiente
+    public function tieneSolicitudProPendiente($id_usuario) {
+        $stmt = $this->conexion->prepare("SELECT id_solicitud FROM Solicitudes_Pro WHERE id_usuario = ? AND estado = 'Pendiente'");
+        $stmt->bind_param("i", $id_usuario);
+        $stmt->execute();
+        $tiene = $stmt->get_result()->num_rows > 0;
+        $stmt->close();
+
+        return $tiene;
+    }
+
+    // Crea una nueva solicitud para pasar a Plan PRO
+    public function crearSolicitudPro($id_usuario, $mensaje, $comprobante_url) {
+        $stmt = $this->conexion->prepare("INSERT INTO Solicitudes_Pro (id_usuario, mensaje, comprobante_url) VALUES (?, ?, ?)");
+        $stmt->bind_param("iss", $id_usuario, $mensaje, $comprobante_url);
+        $exito = $stmt->execute();
+        $stmt->close();
+
+        return $exito;
+    }
+
+    // Trae todas las solicitudes PRO pendientes (para el Administrador)
+    public function obtenerSolicitudesProPendientes() {
+        $sql = "SELECT s.*, u.nombre, u.apellido, u.email 
+                FROM Solicitudes_Pro s 
+                JOIN Usuarios u ON s.id_usuario = u.id_usuario 
+                WHERE s.estado = 'Pendiente' 
+                ORDER BY s.fecha_solicitud ASC";
+        return $this->conexion->query($sql);
+    }
+
+    // Aprueba una solicitud y activa el Plan PRO del usuario
+    public function aprobarSolicitudPro($id_solicitud, $id_usuario_solicitante) {
+        $stmt1 = $this->conexion->prepare("UPDATE Solicitudes_Pro SET estado = 'Aprobada' WHERE id_solicitud = ?");
+        $stmt1->bind_param("i", $id_solicitud);
+        $stmt1->execute();
+        $stmt1->close();
+
+        $stmt2 = $this->conexion->prepare("UPDATE Usuarios SET plan_pro = 1 WHERE id_usuario = ?");
+        $stmt2->bind_param("i", $id_usuario_solicitante);
+        $exito = $stmt2->execute();
+        $stmt2->close();
+
+        return $exito;
+    }
+
+    // Rechaza una solicitud PRO
+    public function rechazarSolicitudPro($id_solicitud) {
+        $stmt = $this->conexion->prepare("UPDATE Solicitudes_Pro SET estado = 'Rechazada' WHERE id_solicitud = ?");
+        $stmt->bind_param("i", $id_solicitud);
+        $exito = $stmt->execute();
+        $stmt->close();
+
+        return $exito;
+    }
 }

@@ -48,7 +48,7 @@
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-2" aria-labelledby="perfilDropdown">
                             <li>
-                                <a class="dropdown-item py-2 fw-semibold text-secondary" href="editar_perfil.php">
+                                <a class="dropdown-item py-2 fw-semibold text-secondary" href="index.php?accion=editar_perfil">
                                     ⚙️ Mi Perfil
                                 </a>
                             </li>
