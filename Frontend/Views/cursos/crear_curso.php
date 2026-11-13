@@ -46,11 +46,18 @@ require_once __DIR__ . '/../layouts/navbar.php';
                         </div>
                         
                         <div class="row mb-3">
-                            <div class="col">
+                            <div class="col-md-4">
+                                <label class="form-label text-secondary fw-semibold small mb-1">Tipo de Acceso</label>
+                                <select name="es_privado" class="form-select form-select-sm">
+                                    <option value="0" selected>🌐 Público (Inscripción libre)</option>
+                                    <option value="1">🔒 Privado (Requiere aprobación)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
                                 <label class="form-label text-secondary fw-semibold small mb-1">Costo ($)</label>
                                 <input type="number" step="0.01" min="0" name="costo" class="form-control form-control-sm" placeholder="Vacío si es gratis">
                             </div>
-                            <div class="col">
+                            <div class="col-md-4">
                                 <label class="form-label text-secondary fw-semibold small mb-1">Cupo Máximo</label>
                                 <input type="number" min="1" name="cupo" class="form-control form-control-sm" placeholder="Vacío para sin límite">
                             </div>

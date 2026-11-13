@@ -10,6 +10,8 @@
                 url.searchParams.delete('borrado');
                 url.searchParams.delete('foro');
                 url.searchParams.delete('mensaje');
+                url.searchParams.delete('pendiente');
+                url.searchParams.delete('inscripcion');
                 window.history.replaceState(null, null, url);
             }
 

@@ -40,7 +40,7 @@ class CursoController {
         $result_noti = null;
 
         if ($id_usuario > 0) {
-            $inscripciones = $this->cursoModel->obtenerIdsCursosInscriptos($id_usuario);
+            $inscripciones = $this->cursoModel->obtenerEstadosInscripcionesUsuario($id_usuario);
             $notis = $this->cargarNotificaciones();
             $no_leidas = $notis['no_leidas'];
             $result_noti = $notis['result_noti'];
@@ -106,11 +106,12 @@ class CursoController {
             $cupo = ($_POST['cupo'] !== '') ? (int)$_POST['cupo'] : null;
             $fecha_inicio = $_POST['fecha_inicio'];
             $fecha_fin = $_POST['fecha_fin'];
+            $es_privado = isset($_POST['es_privado']) ? (int)$_POST['es_privado'] : 0;
 
             if ($fecha_fin < $fecha_inicio) {
                 $mensaje = "<div class='alert alert-danger p-2 small mb-3'>La fecha de fin no puede ser anterior a la de inicio.</div>";
             } else {
-                $id_curso_nuevo = $this->cursoModel->crearCurso($id_usuario, $titulo, $descripcion, $costo, $cupo, $fecha_inicio, $fecha_fin);
+                $id_curso_nuevo = $this->cursoModel->crearCurso($id_usuario, $titulo, $descripcion, $costo, $cupo, $fecha_inicio, $fecha_fin, $es_privado);
                 
                 if ($id_curso_nuevo) {
                     $ids_etiquetas = $_POST['etiquetas'] ?? [];
@@ -159,6 +160,7 @@ class CursoController {
             $cupo_ingresado = ($_POST['cupo'] !== '') ? (int)$_POST['cupo'] : null;
             $fecha_inicio = $_POST['fecha_inicio'];
             $fecha_fin = $_POST['fecha_fin'];
+            $es_privado = isset($_POST['es_privado']) ? (int)$_POST['es_privado'] : 0;
 
             if ($fecha_fin < $fecha_inicio) {
                 $mensaje = "<div class='alert alert-danger p-2 small mb-3'>La fecha de fin no puede ser anterior a la de inicio.</div>";
@@ -177,7 +179,7 @@ class CursoController {
                 }
 
                 if (!$error_cupo) {
-                    if ($this->cursoModel->actualizarCurso($id_curso, $id_usuario, $titulo, $descripcion, $costo, $cupo_final, $fecha_inicio, $fecha_fin)) {
+                    if ($this->cursoModel->actualizarCurso($id_curso, $id_usuario, $titulo, $descripcion, $costo, $cupo_final, $fecha_inicio, $fecha_fin, $es_privado)) {
                         $ids_etiquetas = $_POST['etiquetas'] ?? [];
                         $nuevas_etiquetas = $_POST['nuevas_etiquetas'] ?? '';
                         $this->cursoModel->guardarEtiquetasCurso($id_curso, $ids_etiquetas, $nuevas_etiquetas);
@@ -235,6 +237,8 @@ class CursoController {
 
         if ($resultado === 'ok') {
             header("Location: index.php?exito=1");
+        } elseif ($resultado === 'pendiente') {
+            header("Location: index.php?pendiente=1");
         } elseif ($resultado === 'lleno') {
             header("Location: index.php?error=lleno");
         } else {
@@ -289,6 +293,7 @@ class CursoController {
 
         $materiales = $this->cursoModel->obtenerMaterialesPorCurso($id_curso);
         $alumnos = ($curso['id_creador'] == $id_usuario) ? $this->cursoModel->obtenerAlumnosInscriptos($id_curso) : null;
+        $solicitudes_pendientes = ($curso['id_creador'] == $id_usuario) ? $this->cursoModel->obtenerSolicitudesPendientesCurso($id_curso) : null;
         $preguntas_foro = $this->cursoModel->obtenerPreguntasForoPorCurso($id_curso);
 
         require_once __DIR__ . '/../../Frontend/views/cursos/curso_interno.php';
@@ -376,6 +381,32 @@ class CursoController {
         }
 
         header("Location: index.php?accion=curso_interno&id=$id_curso");
+        exit();
+    }
+
+    // 11. Aceptar o rechazar solicitud de inscripción (Solo creador)
+    public function gestionarInscripcion() {
+        if (!isset($_SESSION['id_usuario']) || $_SERVER['REQUEST_METHOD'] != 'POST') {
+            header("Location: index.php?accion=panel");
+            exit();
+        }
+
+        $id_usuario = (int)$_SESSION['id_usuario'];
+        $id_curso = (int)$_POST['id_curso'];
+        $id_inscripcion = (int)$_POST['id_inscripcion'];
+        $decision = $_POST['decision'] ?? '';
+
+        $res = $this->cursoModel->responderSolicitudInscripcion($id_inscripcion, $id_curso, $id_usuario, $decision);
+
+        if ($res === 'aceptado') {
+            header("Location: index.php?accion=curso_interno&id=$id_curso&inscripcion=aceptada");
+        } elseif ($res === 'rechazado') {
+            header("Location: index.php?accion=curso_interno&id=$id_curso&inscripcion=rechazada");
+        } elseif ($res === 'lleno') {
+            header("Location: index.php?accion=curso_interno&id=$id_curso&error=cupo_lleno");
+        } else {
+            header("Location: index.php?accion=curso_interno&id=$id_curso&error=1");
+        }
         exit();
     }
 }

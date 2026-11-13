@@ -5,6 +5,7 @@ require_once __DIR__ . '/../layouts/navbar.php';
 /** @var mysqli_result|false $materiales */
 /** @var mysqli_result|false $preguntas_foro */
 /** @var mysqli_result|false $alumnos */
+/** @var mysqli_result|false $solicitudes_pendientes */
 ?>
 
 <div class="container mb-5">
@@ -13,8 +14,14 @@ require_once __DIR__ . '/../layouts/navbar.php';
         <div class="alert alert-success text-center shadow-sm auto-ocultar mb-4">¡Archivo subido correctamente!</div>
     <?php elseif (isset($_GET['borrado'])): ?>
         <div class="alert alert-success text-center shadow-sm auto-ocultar mb-4">¡Material eliminado correctamente!</div>
+    <?php elseif (isset($_GET['inscripcion']) && $_GET['inscripcion'] == 'aceptada'): ?>
+        <div class="alert alert-success text-center shadow-sm auto-ocultar mb-4">¡Alumno aceptado en el curso!</div>
+    <?php elseif (isset($_GET['inscripcion']) && $_GET['inscripcion'] == 'rechazada'): ?>
+        <div class="alert alert-secondary text-center shadow-sm auto-ocultar mb-4">Solicitud de inscripción rechazada.</div>
     <?php elseif (isset($_GET['error']) && $_GET['error'] == 'tamanio'): ?>
         <div class="alert alert-danger text-center shadow-sm mb-4">Error desde el servidor: El archivo supera el límite máximo de 5MB.</div>
+    <?php elseif (isset($_GET['error']) && $_GET['error'] == 'cupo_lleno'): ?>
+        <div class="alert alert-danger text-center shadow-sm mb-4">No podés aceptar más alumnos porque el cupo del curso ya está completo.</div>
     <?php elseif (isset($_GET['error'])): ?>
         <div class="alert alert-danger text-center shadow-sm mb-4">Hubo un error al procesar tu solicitud.</div>
     <?php elseif (isset($_GET['foro']) && $_GET['foro'] == 'pregunta_ok'): ?>
@@ -131,6 +138,53 @@ require_once __DIR__ . '/../layouts/navbar.php';
             </div>
         </div>
     </div>
+
+    <!-- Sección Solicitudes Pendientes (Solo visible para el creador) -->
+    <?php if ($curso['id_creador'] == $id_usuario && isset($solicitudes_pendientes) && $solicitudes_pendientes && $solicitudes_pendientes->num_rows > 0): ?>
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card card-compacta shadow-sm border-warning border-2">
+                <div class="card-body p-4">
+                    <h4 class="text-primario fw-bold mb-3">📩 Solicitudes de Inscripción Pendientes</h4>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <tbody>
+                                <?php while ($sol = $solicitudes_pendientes->fetch_assoc()): ?>
+                                    <tr>
+                                        <td class="border-0 border-bottom py-3">
+                                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                                <div class="d-flex align-items-center">
+                                                    <?php if (!empty($sol['imagen_perfil'])): ?>
+                                                        <img src="uploads/<?php echo htmlspecialchars($sol['imagen_perfil']); ?>" class="rounded-circle me-3 shadow-sm" style="width: 45px; height: 45px; object-fit: cover;" alt="Foto">
+                                                    <?php else: ?>
+                                                        <div class="text-white rounded-circle d-flex justify-content-center align-items-center me-3 shadow-sm" style="width: 45px; height: 45px; font-size: 1.2rem; font-weight: bold; background-color: var(--color-primario);">
+                                                            <?php echo strtoupper(substr($sol['nombre'], 0, 1)); ?>
+                                                        </div>
+                                                    <?php endif; ?>
+                                                    <div>
+                                                        <span class="fw-bold text-dark d-block"><?php echo htmlspecialchars($sol['nombre'] . ' ' . $sol['apellido']); ?></span>
+                                                        <small class="text-muted">✉️ <?php echo htmlspecialchars($sol['email']); ?> · Solicitado el <?php echo date('d/m/Y H:i', strtotime($sol['fecha_inscripcion'])); ?></small>
+                                                    </div>
+                                                </div>
+
+                                                <form action="index.php?accion=gestionar_inscripcion" method="POST" class="d-flex gap-2">
+                                                    <input type="hidden" name="id_curso" value="<?php echo $id_curso; ?>">
+                                                    <input type="hidden" name="id_inscripcion" value="<?php echo $sol['id_inscripcion']; ?>">
+                                                    <button type="submit" name="decision" value="aceptar" class="btn btn-sm btn-success fw-bold">✅ Aceptar</button>
+                                                    <button type="submit" name="decision" value="rechazar" class="btn btn-sm btn-outline-danger fw-bold" onclick="return confirm('¿Rechazar esta solicitud de inscripción?');">❌ Rechazar</button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <?php endwhile; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
 
     <!-- Sección Alumnos Inscriptos (Solo visible para el creador) -->
     <?php if ($curso['id_creador'] == $id_usuario): ?>

@@ -66,6 +66,11 @@ switch ($accion) {
         $cursoController->inscribirse();
         break;
 
+    case 'gestionar_inscripcion':
+        $cursoController = new CursoController($conexion);
+        $cursoController->gestionarInscripcion();
+        break;
+
     case 'dejar_curso':
         $cursoController = new CursoController($conexion);
         $cursoController->dejarCurso();

@@ -43,6 +43,8 @@ $etiqueta_actual = isset($_GET['etiqueta']) ? (int)$_GET['etiqueta'] : 0;
 <div class="container mb-5">
     <?php if (isset($_GET['exito'])): ?>
         <div class="alert alert-success text-center shadow-sm auto-ocultar mb-4">¡Te inscribiste al curso correctamente!</div>
+    <?php elseif (isset($_GET['pendiente'])): ?>
+        <div class="alert alert-info text-center shadow-sm auto-ocultar mb-4">📩 ¡Solicitud enviada! El creador del curso debe confirmar tu inscripción antes de que puedas ingresar.</div>
     <?php elseif (isset($_GET['error']) && $_GET['error'] == 'lleno'): ?>
         <div class="alert alert-danger text-center shadow-sm auto-ocultar mb-4">Lo sentimos, el cupo de este curso ya está lleno.</div>
     <?php elseif (isset($_GET['error']) && $_GET['error'] == 'admin'): ?>
@@ -61,17 +63,28 @@ $etiqueta_actual = isset($_GET['etiqueta']) ? (int)$_GET['etiqueta'] : 0;
                 <?php 
                     $es_pro = ((int)($curso['pro_vigente'] ?? 0) === 1);
                     $es_recomendado = ((int)($curso['coincidencias_interes'] ?? 0) > 0);
+                    $es_privado = ((int)($curso['es_privado'] ?? 0) === 1);
+                    $es_pago = ($curso['costo'] !== null && (float)$curso['costo'] > 0);
+                    $requiere_aprobacion = ($es_privado || $es_pago);
+                    $estado_inscripcion = $inscripciones[(int)$curso['id_curso']] ?? null;
                 ?>
                 <div class="col">
                     <div class="card h-100 card-compacta shadow-sm <?php echo $es_pro ? '' : 'border-0'; ?>" 
                          style="<?php echo $es_pro ? 'background-color: #eafaf1; border: 2px solid #6dce99;' : ''; ?>">
                         <div class="card-body d-flex flex-column">
                             
-                            <!-- Fila de insignias: Precio, PRO y Recomendado -->
+                            <!-- Fila de insignias: Precio, Acceso, PRO y Recomendado -->
                             <div class="mb-2 d-flex flex-wrap justify-content-between align-items-center gap-1">
-                                <span class="badge bg-success bg-opacity-75">
-                                    <?php echo ($curso['costo'] > 0) ? '$' . $curso['costo'] : 'Gratis'; ?>
-                                </span>
+                                <div class="d-flex flex-wrap gap-1">
+                                    <span class="badge bg-success bg-opacity-75">
+                                        <?php echo $es_pago ? '$' . $curso['costo'] : 'Gratis'; ?>
+                                    </span>
+                                    <?php if ($es_privado): ?>
+                                        <span class="badge bg-dark">🔒 Privado</span>
+                                    <?php else: ?>
+                                        <span class="badge bg-light text-dark border">🌐 Público</span>
+                                    <?php endif; ?>
+                                </div>
 
                                 <div class="d-flex flex-wrap gap-1">
                                     <?php if ($es_pro): ?>
@@ -125,14 +138,20 @@ $etiqueta_actual = isset($_GET['etiqueta']) ? (int)$_GET['etiqueta'] : 0;
                                     <button class="btn btn-secondary w-100 btn-sm fw-bold" disabled>Modo Admin</button>
                                 <?php elseif ($_SESSION['id_usuario'] == $curso['id_creador']): ?>
                                     <button class="btn btn-light text-muted w-100 btn-sm fw-bold" disabled>Sos el creador</button>
-                                <?php elseif (in_array($curso['id_curso'], $inscripciones)): ?>
+                                <?php elseif ($estado_inscripcion === 'Aceptado'): ?>
                                     <button class="btn btn-success w-100 btn-sm fw-bold" disabled>Ya estás inscripto</button>
+                                <?php elseif ($estado_inscripcion === 'Pendiente'): ?>
+                                    <button class="btn btn-warning text-dark w-100 btn-sm fw-bold" disabled>⏳ Solicitud pendiente</button>
+                                <?php elseif ($estado_inscripcion === 'Rechazado'): ?>
+                                    <button class="btn btn-outline-danger w-100 btn-sm fw-bold" disabled>❌ Solicitud rechazada</button>
                                 <?php elseif ($curso['cupo'] !== null && $curso['cupo'] <= 0): ?>
                                     <button class="btn btn-danger w-100 btn-sm fw-bold" disabled>Cupo Lleno</button>
                                 <?php else: ?>
                                     <form action="index.php?accion=inscribirse" method="POST">
                                         <input type="hidden" name="id_curso" value="<?php echo $curso['id_curso']; ?>">
-                                        <button type="submit" class="btn btn-primario w-100 btn-sm fw-bold">Inscribirse</button>
+                                        <button type="submit" class="btn <?php echo $requiere_aprobacion ? 'btn-outline-success' : 'btn-primario'; ?> w-100 btn-sm fw-bold">
+                                            <?php echo $requiere_aprobacion ? '📩 Solicitar inscripción' : 'Inscribirse'; ?>
+                                        </button>
                                     </form>
                                 <?php endif; ?>
                             </div>

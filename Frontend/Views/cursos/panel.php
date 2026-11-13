@@ -45,10 +45,17 @@ require_once __DIR__ . '/../layouts/navbar.php';
                             </div>
 
                             <?php if ($curso['activo'] == 1): ?>
-                                <div class="d-flex flex-column gap-1 text-end">
-                                    <a href="index.php?accion=curso_interno&id=<?php echo $curso['id_curso']; ?>" class="btn btn-sm btn-acento fw-bold">Entrar</a>
-                                    <a href="index.php?accion=dejar_curso&id=<?php echo $curso['id_curso']; ?>" class="btn btn-sm btn-outline-danger fw-bold" style="font-size: 0.75rem;" onclick="return confirm('¿Seguro que querés abandonar este curso?');">Dejar curso</a>
-                                </div>
+                                <?php if (($curso['estado'] ?? 'Aceptado') === 'Pendiente'): ?>
+                                    <div class="d-flex flex-column gap-1 text-end">
+                                        <span class="badge bg-warning text-dark">⏳ Pendiente de aprobación</span>
+                                        <a href="index.php?accion=dejar_curso&id=<?php echo $curso['id_curso']; ?>" class="btn btn-sm btn-outline-danger fw-bold" style="font-size: 0.75rem;" onclick="return confirm('¿Seguro que querés cancelar tu solicitud?');">Cancelar solicitud</a>
+                                    </div>
+                                <?php else: ?>
+                                    <div class="d-flex flex-column gap-1 text-end">
+                                        <a href="index.php?accion=curso_interno&id=<?php echo $curso['id_curso']; ?>" class="btn btn-sm btn-acento fw-bold">Entrar</a>
+                                        <a href="index.php?accion=dejar_curso&id=<?php echo $curso['id_curso']; ?>" class="btn btn-sm btn-outline-danger fw-bold" style="font-size: 0.75rem;" onclick="return confirm('¿Seguro que querés abandonar este curso?');">Dejar curso</a>
+                                    </div>
+                                <?php endif; ?>
                             <?php else: ?>
                                 <div class="d-flex flex-column gap-1 text-end">
                                     <button class="btn btn-sm btn-secondary fw-bold" disabled>Inactivo</button>
@@ -74,10 +81,20 @@ require_once __DIR__ . '/../layouts/navbar.php';
                     <?php while ($creado = $cursos_creados->fetch_assoc()): ?>
                         <div class="list-group-item p-3 border-0 border-bottom">
                             <div class="d-flex justify-content-between align-items-center mb-2">
-                                <h6 class="mb-0 fw-bold text-dark"><?php echo htmlspecialchars($creado['titulo']); ?></h6>
-                                <span class="badge bg-secondary">
-                                    Cupo: <?php echo $creado['cupo'] !== null ? $creado['cupo'] : 'Ilimitado'; ?>
-                                </span>
+                                <h6 class="mb-0 fw-bold text-dark">
+                                    <?php echo htmlspecialchars($creado['titulo']); ?>
+                                    <?php if ((int)($creado['es_privado'] ?? 0) === 1): ?>
+                                        <span class="badge bg-dark ms-1" style="font-size: 0.65rem;">🔒 Privado</span>
+                                    <?php endif; ?>
+                                </h6>
+                                <div class="d-flex gap-1">
+                                    <?php if ((int)($creado['solicitudes_pendientes'] ?? 0) > 0): ?>
+                                        <span class="badge bg-warning text-dark">📩 <?php echo $creado['solicitudes_pendientes']; ?> pendiente/s</span>
+                                    <?php endif; ?>
+                                    <span class="badge bg-secondary">
+                                        Cupo: <?php echo $creado['cupo'] !== null ? $creado['cupo'] : 'Ilimitado'; ?>
+                                    </span>
+                                </div>
                             </div>
                             <div class="d-flex justify-content-between align-items-center">
                                 <small class="text-muted">Inicio: <?php echo date("d/m/Y", strtotime($creado['fecha_inicio'])); ?></small>
