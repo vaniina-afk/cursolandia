@@ -42,7 +42,7 @@ class UsuarioModel {
 
     // Obtiene los datos completos de un usuario por su ID
     public function obtenerPorId($id_usuario) {
-        $stmt = $this->conexion->prepare("SELECT id_usuario, nombre, apellido, email, antecedentes, imagen_perfil, plan_pro FROM Usuarios WHERE id_usuario = ?");
+        $stmt = $this->conexion->prepare("SELECT id_usuario, nombre, apellido, email, antecedentes, imagen_perfil, plan_pro, vencimiento_pro FROM Usuarios WHERE id_usuario = ?");
         $stmt->bind_param("i", $id_usuario);
         $stmt->execute();
         $usuario = $stmt->get_result()->fetch_assoc();
@@ -118,17 +118,36 @@ class UsuarioModel {
         return $this->conexion->query($sql);
     }
 
-    // Aprueba una solicitud y activa el Plan PRO del usuario
-    public function aprobarSolicitudPro($id_solicitud, $id_usuario_solicitante) {
+    // Aprueba una solicitud y activa el Plan PRO con fecha de vencimiento
+    public function aprobarSolicitudPro($id_solicitud, $id_usuario_solicitante, $fecha_vencimiento) {
         $stmt1 = $this->conexion->prepare("UPDATE Solicitudes_Pro SET estado = 'Aprobada' WHERE id_solicitud = ?");
         $stmt1->bind_param("i", $id_solicitud);
         $stmt1->execute();
         $stmt1->close();
 
-        $stmt2 = $this->conexion->prepare("UPDATE Usuarios SET plan_pro = 1 WHERE id_usuario = ?");
-        $stmt2->bind_param("i", $id_usuario_solicitante);
+        $stmt2 = $this->conexion->prepare("UPDATE Usuarios SET plan_pro = 1, vencimiento_pro = ? WHERE id_usuario = ?");
+        $stmt2->bind_param("si", $fecha_vencimiento, $id_usuario_solicitante);
         $exito = $stmt2->execute();
         $stmt2->close();
+
+        return $exito;
+    }
+
+    // Trae todos los usuarios que actualmente tienen Plan PRO activo
+    public function obtenerUsuariosPro() {
+        $sql = "SELECT id_usuario, nombre, apellido, email, vencimiento_pro 
+                FROM Usuarios 
+                WHERE plan_pro = 1 
+                ORDER BY vencimiento_pro ASC";
+        return $this->conexion->query($sql);
+    }
+
+    // Le quita el Plan PRO a un usuario (lo vuelve a Gratuito)
+    public function revocarPlanPro($id_usuario_target) {
+        $stmt = $this->conexion->prepare("UPDATE Usuarios SET plan_pro = 0, vencimiento_pro = NULL WHERE id_usuario = ?");
+        $stmt->bind_param("i", $id_usuario_target);
+        $exito = $stmt->execute();
+        $stmt->close();
 
         return $exito;
     }

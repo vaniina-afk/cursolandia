@@ -8,7 +8,7 @@ class CursoModel {
 
     // --- MÉTODOS PARA EL CATÁLOGO (INICIO) ---
     public function obtenerCursosActivos($id_usuario = 0, $busqueda = '', $id_etiqueta = 0) {
-        $sql = "SELECT c.*, u.nombre, u.apellido, u.plan_pro,
+        $sql = "SELECT c.*, u.nombre, u.apellido, (u.plan_pro = 1 AND (u.vencimiento_pro IS NULL OR u.vencimiento_pro >= CURDATE())) AS pro_vigente,
                        GROUP_CONCAT(DISTINCT e.nombre ORDER BY e.nombre SEPARATOR ', ') AS lista_etiquetas,
                        COUNT(DISTINCT ui.id_interes) AS coincidencias_interes
                 FROM Cursos c
@@ -38,7 +38,7 @@ class CursoModel {
         }
 
         $sql .= " GROUP BY c.id_curso
-                  ORDER BY u.plan_pro DESC, coincidencias_interes DESC, c.id_curso DESC";
+                  ORDER BY pro_vigente DESC, coincidencias_interes DESC, c.id_curso DESC";
 
         $stmt = $this->conexion->prepare($sql);
         $stmt->bind_param($tipos, ...$params);
@@ -96,13 +96,19 @@ class CursoModel {
     // --- MÉTODOS PARA CREAR, EDITAR Y BORRAR CURSOS ---
 
     public function esUsuarioPro($id_usuario) {
-        $stmt = $this->conexion->prepare("SELECT plan_pro FROM Usuarios WHERE id_usuario = ?");
+        $stmt = $this->conexion->prepare("SELECT plan_pro, vencimiento_pro FROM Usuarios WHERE id_usuario = ?");
         $stmt->bind_param("i", $id_usuario);
         $stmt->execute();
         $fila = $stmt->get_result()->fetch_assoc();
         $stmt->close();
 
-        return $fila ? (int)$fila['plan_pro'] : 0;
+        if (!$fila || (int)$fila['plan_pro'] === 0) {
+            return 0;
+        }
+        if (!empty($fila['vencimiento_pro']) && $fila['vencimiento_pro'] < date('Y-m-d')) {
+            return 0;
+        }
+        return 1;
     }
 
     public function contarCursosActivosCreados($id_usuario) {

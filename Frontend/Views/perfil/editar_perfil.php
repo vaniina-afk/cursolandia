@@ -5,8 +5,29 @@ require_once __DIR__ . '/../layouts/navbar.php';
 ?>
 
 <div class="container mb-5">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h4 class="fw-bold text-primario mb-0">Configuración de la Cuenta</h4>
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+        <div>
+            <h4 class="fw-bold text-primario mb-1">Configuración de la Cuenta</h4>
+            <?php if ((int)$datos_usuario['plan_pro'] === 1): ?>
+                <?php 
+                    $vence = !empty($datos_usuario['vencimiento_pro']) 
+                        ? date('d/m/Y', strtotime($datos_usuario['vencimiento_pro'])) 
+                        : 'Sin vencimiento';
+                    $esta_vencido = (!empty($datos_usuario['vencimiento_pro']) && $datos_usuario['vencimiento_pro'] < date('Y-m-d'));
+                ?>
+                <?php if ($esta_vencido): ?>
+                    <span class="badge bg-danger">⚠️ Plan PRO Vencido (el <?php echo $vence; ?>)</span>
+                    <a href="index.php?accion=solicitar_pro" class="small text-primario fw-bold ms-2 text-decoration-none">Renovar plan →</a>
+                <?php else: ?>
+                    <span class="badge text-dark fw-bold" style="background-color: #a3e4d7; border: 1px solid #50a886;">
+                        ⭐ Plan Actual: PRO · Vence el <?php echo $vence; ?>
+                    </span>
+                <?php endif; ?>
+            <?php else: ?>
+                <span class="badge bg-secondary">Plan Actual: Gratuito (hasta 3 cursos activos)</span>
+                <a href="index.php?accion=solicitar_pro" class="small text-primario fw-bold ms-2 text-decoration-none">Pasarme a PRO →</a>
+            <?php endif; ?>
+        </div>
         <a href="index.php?accion=panel" class="btn btn-outline-secondary btn-sm fw-semibold">← Volver al Panel</a>
     </div>
     

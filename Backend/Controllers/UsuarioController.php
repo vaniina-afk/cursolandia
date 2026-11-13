@@ -173,7 +173,7 @@ class UsuarioController {
         require_once __DIR__ . '/../../Frontend/views/perfil/solicitar_pro.php';
     }
 
-    // 3. Administrar Solicitudes PRO (Solo Admin)
+    // 3. Administrar Solicitudes PRO y Usuarios PRO (Solo Admin)
     public function adminSolicitudes() {
         if (!isset($_SESSION['id_usuario']) || $_SESSION['es_admin'] == 0) {
             header("Location: index.php");
@@ -186,22 +186,48 @@ class UsuarioController {
         $mensaje_ui = "";
 
         if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['decision'])) {
-            $id_solicitud = (int)$_POST['id_solicitud'];
-            $id_user_solicitante = (int)$_POST['id_usuario_solicitante'];
             $decision = $_POST['decision'];
+            $id_user_solicitante = (int)$_POST['id_usuario_solicitante'];
 
             if ($decision == 'aprobar') {
-                $this->usuarioModel->aprobarSolicitudPro($id_solicitud, $id_user_solicitante);
-                $this->usuarioModel->notificarUsuario($id_user_solicitante, "🎉 ¡Tu solicitud de Plan PRO fue aprobada! Ya podés crear cursos ilimitados y destacar en el catálogo.", "index.php?accion=panel");
-                $mensaje_ui = "<div class='alert alert-success p-2 small mb-3 auto-ocultar'>Solicitud aprobada. El usuario ahora es PRO.</div>";
+                $id_solicitud = (int)$_POST['id_solicitud'];
+                $fecha_vencimiento = !empty($_POST['fecha_vencimiento']) 
+                    ? $_POST['fecha_vencimiento'] 
+                    : date('Y-m-d', strtotime('+30 days'));
+
+                $this->usuarioModel->aprobarSolicitudPro($id_solicitud, $id_user_solicitante, $fecha_vencimiento);
+                
+                $fecha_formateada = date('d/m/Y', strtotime($fecha_vencimiento));
+                $this->usuarioModel->notificarUsuario(
+                    $id_user_solicitante,
+                    "🎉 ¡Tu solicitud de Plan PRO fue aprobada! Tenés beneficios PRO vigentes hasta el $fecha_formateada.",
+                    "index.php?accion=editar_perfil"
+                );
+                $mensaje_ui = "<div class='alert alert-success p-2 small mb-3 auto-ocultar'>Solicitud aprobada. Plan PRO activo hasta el $fecha_formateada.</div>";
+
             } elseif ($decision == 'rechazar') {
+                $id_solicitud = (int)$_POST['id_solicitud'];
                 $this->usuarioModel->rechazarSolicitudPro($id_solicitud);
-                $this->usuarioModel->notificarUsuario($id_user_solicitante, "😔 Tu solicitud de Plan PRO fue rechazada.", "index.php?accion=panel");
+                $this->usuarioModel->notificarUsuario(
+                    $id_user_solicitante,
+                    "Tu solicitud de Plan PRO fue rechazada. Podés revisar los requisitos o volver a enviarla.",
+                    "index.php?accion=solicitar_pro"
+                );
                 $mensaje_ui = "<div class='alert alert-secondary p-2 small mb-3 auto-ocultar'>Solicitud rechazada.</div>";
+
+            } elseif ($decision == 'revocar') {
+                $this->usuarioModel->revocarPlanPro($id_user_solicitante);
+                $this->usuarioModel->notificarUsuario(
+                    $id_user_solicitante,
+                    "Tu suscripción al Plan PRO ha finalizado y tu cuenta volvió al plan Gratuito.",
+                    "index.php?accion=solicitar_pro"
+                );
+                $mensaje_ui = "<div class='alert alert-warning p-2 small mb-3 auto-ocultar'>Se ha dado de baja el Plan PRO del usuario.</div>";
             }
         }
 
         $solicitudes = $this->usuarioModel->obtenerSolicitudesProPendientes();
+        $usuarios_pro = $this->usuarioModel->obtenerUsuariosPro();
         require_once __DIR__ . '/../../Frontend/views/perfil/admin_solicitudes.php';
     }
 }

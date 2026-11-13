@@ -59,7 +59,7 @@ $etiqueta_actual = isset($_GET['etiqueta']) ? (int)$_GET['etiqueta'] : 0;
         <?php if (isset($resultado_cursos) && $resultado_cursos && $resultado_cursos->num_rows > 0): ?>
             <?php while ($curso = $resultado_cursos->fetch_assoc()): ?>
                 <?php 
-                    $es_pro = ((int)($curso['plan_pro'] ?? 0) === 1);
+                    $es_pro = ((int)($curso['pro_vigente'] ?? 0) === 1);
                     $es_recomendado = ((int)($curso['coincidencias_interes'] ?? 0) > 0);
                 ?>
                 <div class="col">
