@@ -6,6 +6,8 @@ require_once __DIR__ . '/layouts/navbar.php';
 /** @var mysqli_result|false $etiquetas_filtro */
 $busqueda_actual = $_GET['buscar'] ?? '';
 $etiqueta_actual = isset($_GET['etiqueta']) ? (int)$_GET['etiqueta'] : 0;
+$acceso_actual = $_GET['acceso'] ?? '';
+$hay_filtros = ($busqueda_actual !== '' || $etiqueta_actual > 0 || $acceso_actual !== '');
 ?>
 
 <div class="container mb-4">
@@ -13,10 +15,10 @@ $etiqueta_actual = isset($_GET['etiqueta']) ? (int)$_GET['etiqueta'] : 0;
         <h1 class="display-5 fw-bold text-primario">Explorá nuestros cursos</h1>
         <p class="lead text-secondary mb-4">Anotate en las mejores clases o convertite en creador de contenido hoy mismo.</p>
 
-        <!-- BUSCADOR Y FILTRO POR ETIQUETAS -->
+        <!-- BUSCADOR Y FILTROS POR ETIQUETAS Y ACCESO -->
         <form action="index.php" method="GET" class="row g-2 justify-content-center mt-2">
-            <div class="col-md-5">
-                <input type="text" name="buscar" class="form-control" placeholder="🔍 Buscar curso por título..." value="<?php echo htmlspecialchars($busqueda_actual); ?>">
+            <div class="col-md-4">
+                <input type="text" name="buscar" class="form-control" placeholder="🔍 Buscar por título..." value="<?php echo htmlspecialchars($busqueda_actual); ?>">
             </div>
             <div class="col-md-3">
                 <select name="etiqueta" class="form-select">
@@ -30,9 +32,16 @@ $etiqueta_actual = isset($_GET['etiqueta']) ? (int)$_GET['etiqueta'] : 0;
                     <?php endif; ?>
                 </select>
             </div>
+            <div class="col-md-2">
+                <select name="acceso" class="form-select">
+                    <option value="">Todos los accesos</option>
+                    <option value="publico" <?php echo ($acceso_actual === 'publico') ? 'selected' : ''; ?>>🌐 Públicos</option>
+                    <option value="privado" <?php echo ($acceso_actual === 'privado') ? 'selected' : ''; ?>>🔒 Privados</option>
+                </select>
+            </div>
             <div class="col-md-auto d-flex gap-2">
                 <button type="submit" class="btn btn-primario fw-bold px-4">Buscar</button>
-                <?php if ($busqueda_actual !== '' || $etiqueta_actual > 0): ?>
+                <?php if ($hay_filtros): ?>
                     <a href="index.php" class="btn btn-outline-secondary fw-semibold">Limpiar</a>
                 <?php endif; ?>
             </div>
@@ -45,6 +54,11 @@ $etiqueta_actual = isset($_GET['etiqueta']) ? (int)$_GET['etiqueta'] : 0;
         <div class="alert alert-success text-center shadow-sm auto-ocultar mb-4">¡Te inscribiste al curso correctamente!</div>
     <?php elseif (isset($_GET['pendiente'])): ?>
         <div class="alert alert-info text-center shadow-sm auto-ocultar mb-4">📩 ¡Solicitud enviada! El creador del curso debe confirmar tu inscripción antes de que puedas ingresar.</div>
+    <?php elseif (isset($_GET['error']) && $_GET['error'] == 'limite_pro'): ?>
+        <div class="alert alert-warning text-center shadow-sm mb-4">
+            <strong>¡Límite alcanzado!</strong> Con el plan Gratuito podés estar inscripto en un máximo de 3 cursos activos. 
+            <a href="index.php?accion=solicitar_pro" class="fw-bold text-primario text-decoration-underline ms-1">Pasate a Plan PRO</a> para inscribirte sin límites.
+        </div>
     <?php elseif (isset($_GET['error']) && $_GET['error'] == 'lleno'): ?>
         <div class="alert alert-danger text-center shadow-sm auto-ocultar mb-4">Lo sentimos, el cupo de este curso ya está lleno.</div>
     <?php elseif (isset($_GET['error']) && $_GET['error'] == 'admin'): ?>
@@ -53,7 +67,7 @@ $etiqueta_actual = isset($_GET['etiqueta']) ? (int)$_GET['etiqueta'] : 0;
 
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h4 class="text-primario fw-bold mb-0">
-            <?php echo ($busqueda_actual !== '' || $etiqueta_actual > 0) ? 'Resultados de búsqueda' : 'Catálogo de Cursos'; ?>
+            <?php echo $hay_filtros ? 'Resultados de búsqueda' : 'Catálogo de Cursos'; ?>
         </h4>
     </div>
 
@@ -67,41 +81,67 @@ $etiqueta_actual = isset($_GET['etiqueta']) ? (int)$_GET['etiqueta'] : 0;
                     $es_pago = ($curso['costo'] !== null && (float)$curso['costo'] > 0);
                     $requiere_aprobacion = ($es_privado || $es_pago);
                     $estado_inscripcion = $inscripciones[(int)$curso['id_curso']] ?? null;
+
+                    $ya_inscripto = ($estado_inscripcion === 'Aceptado' || $estado_inscripcion === 'Pendiente');
+                    $sin_cupo = (!$ya_inscripto && $curso['cupo'] !== null && (int)$curso['cupo'] <= 0);
+
+                    if ($sin_cupo) {
+                        $card_clases = 'bg-light text-muted opacity-75 border';
+                        $card_estilo = 'background-color: #f1f3f5;';
+                    } elseif ($ya_inscripto) {
+                        $card_clases = 'border';
+                        $card_estilo = 'background-color: #f8f9fa; border-color: #ced4da !important;';
+                    } elseif ($es_pro) {
+                        $card_clases = '';
+                        $card_estilo = 'background-color: #eafaf1; border: 2px solid #6dce99;';
+                    } else {
+                        $card_clases = 'border-0';
+                        $card_estilo = '';
+                    }
                 ?>
                 <div class="col">
-                    <div class="card h-100 card-compacta shadow-sm <?php echo $es_pro ? '' : 'border-0'; ?>" 
-                         style="<?php echo $es_pro ? 'background-color: #eafaf1; border: 2px solid #6dce99;' : ''; ?>">
+                    <div class="card h-100 card-compacta shadow-sm <?php echo $card_clases; ?>" style="<?php echo $card_estilo; ?>">
                         <div class="card-body d-flex flex-column">
                             
                             <!-- Fila de insignias: Precio, Acceso, PRO y Recomendado -->
                             <div class="mb-2 d-flex flex-wrap justify-content-between align-items-center gap-1">
                                 <div class="d-flex flex-wrap gap-1">
-                                    <span class="badge bg-success bg-opacity-75">
+                                    <span class="badge <?php echo $sin_cupo ? 'bg-secondary' : 'bg-success bg-opacity-75'; ?>">
                                         <?php echo $es_pago ? '$' . $curso['costo'] : 'Gratis'; ?>
                                     </span>
                                     <?php if ($es_privado): ?>
-                                        <span class="badge bg-dark">🔒 Privado</span>
+                                        <span class="badge <?php echo $sin_cupo ? 'bg-secondary' : 'bg-dark'; ?>">🔒 Privado</span>
                                     <?php else: ?>
                                         <span class="badge bg-light text-dark border">🌐 Público</span>
                                     <?php endif; ?>
                                 </div>
 
                                 <div class="d-flex flex-wrap gap-1">
-                                    <?php if ($es_pro): ?>
-                                        <span class="badge text-dark fw-bold" style="background-color: #a3e4d7; border: 1px solid #50a886;">
-                                            ⭐ Destacado PRO
+                                    <?php if ($sin_cupo): ?>
+                                        <span class="badge bg-secondary">🚫 Sin cupos</span>
+                                    <?php elseif ($ya_inscripto): ?>
+                                        <span class="badge bg-info text-dark">
+                                            <?php echo ($estado_inscripcion === 'Aceptado') ? '✅ Cursando' : '⏳ Pendiente'; ?>
                                         </span>
-                                    <?php endif; ?>
+                                    <?php else: ?>
+                                        <?php if ($es_pro): ?>
+                                            <span class="badge text-dark fw-bold" style="background-color: #a3e4d7; border: 1px solid #50a886;">
+                                                ⭐ Destacado PRO
+                                            </span>
+                                        <?php endif; ?>
 
-                                    <?php if ($es_recomendado): ?>
-                                        <span class="badge bg-primary bg-opacity-75">
-                                            🎯 Recomendado
-                                        </span>
+                                        <?php if ($es_recomendado): ?>
+                                            <span class="badge bg-primary bg-opacity-75">
+                                                🎯 Recomendado
+                                            </span>
+                                        <?php endif; ?>
                                     <?php endif; ?>
                                 </div>
                             </div>
 
-                            <h5 class="card-title text-primario fw-bold"><?php echo htmlspecialchars($curso['titulo']); ?></h5>
+                            <h5 class="card-title <?php echo $sin_cupo ? 'text-secondary' : 'text-primario'; ?> fw-bold">
+                                <?php echo htmlspecialchars($curso['titulo']); ?>
+                            </h5>
                             
                             <p class="card-text text-secondary small flex-grow-1">
                                 <?php 
@@ -127,7 +167,7 @@ $etiqueta_actual = isset($_GET['etiqueta']) ? (int)$_GET['etiqueta'] : 0;
                                     👨‍🏫 <?php echo htmlspecialchars($curso['nombre'] . ' ' . $curso['apellido']); ?>
                                 </small>
                                 <small class="text-muted">
-                                    Cupo: <?php echo $curso['cupo'] ? $curso['cupo'] : 'Sin límite'; ?>
+                                    Cupo: <?php echo ($curso['cupo'] !== null) ? $curso['cupo'] : 'Sin límite'; ?>
                                 </small>
                             </div>
 
@@ -137,15 +177,17 @@ $etiqueta_actual = isset($_GET['etiqueta']) ? (int)$_GET['etiqueta'] : 0;
                                 <?php elseif ($_SESSION['es_admin'] == 1): ?>
                                     <button class="btn btn-secondary w-100 btn-sm fw-bold" disabled>Modo Admin</button>
                                 <?php elseif ($_SESSION['id_usuario'] == $curso['id_creador']): ?>
-                                    <button class="btn btn-light text-muted w-100 btn-sm fw-bold" disabled>Sos el creador</button>
+                                    <button class="btn btn-light text-muted w-100 btn-sm fw-bold border" disabled>Sos el creador</button>
                                 <?php elseif ($estado_inscripcion === 'Aceptado'): ?>
-                                    <button class="btn btn-success w-100 btn-sm fw-bold" disabled>Ya estás inscripto</button>
+                                    <a href="index.php?accion=curso_interno&id=<?php echo $curso['id_curso']; ?>" class="btn btn-outline-success w-100 btn-sm fw-bold">Ir al Aula →</a>
                                 <?php elseif ($estado_inscripcion === 'Pendiente'): ?>
                                     <button class="btn btn-warning text-dark w-100 btn-sm fw-bold" disabled>⏳ Solicitud pendiente</button>
                                 <?php elseif ($estado_inscripcion === 'Rechazado'): ?>
                                     <button class="btn btn-outline-danger w-100 btn-sm fw-bold" disabled>❌ Solicitud rechazada</button>
-                                <?php elseif ($curso['cupo'] !== null && $curso['cupo'] <= 0): ?>
-                                    <button class="btn btn-danger w-100 btn-sm fw-bold" disabled>Cupo Lleno</button>
+                                <?php elseif ($sin_cupo): ?>
+                                    <button class="btn btn-secondary w-100 btn-sm fw-bold" disabled>Cupo Lleno</button>
+                                <?php elseif (!empty($limite_inscripciones)): ?>
+                                    <a href="index.php?accion=solicitar_pro" class="btn btn-outline-warning text-dark w-100 btn-sm fw-bold" title="Alcanzaste el máximo de 3 cursos del plan gratuito">⭐ Límite 3 cursos (Pasate a PRO)</a>
                                 <?php else: ?>
                                     <form action="index.php?accion=inscribirse" method="POST">
                                         <input type="hidden" name="id_curso" value="<?php echo $curso['id_curso']; ?>">
@@ -162,7 +204,7 @@ $etiqueta_actual = isset($_GET['etiqueta']) ? (int)$_GET['etiqueta'] : 0;
         <?php else: ?>
             <div class="col-12">
                 <div class="alert alert-info text-center shadow-sm">
-                    <?php echo ($busqueda_actual !== '' || $etiqueta_actual > 0) 
+                    <?php echo $hay_filtros 
                         ? 'No se encontraron cursos que coincidan con tu búsqueda.' 
                         : 'Aún no hay cursos publicados en la plataforma.'; ?>
                 </div>

@@ -32,15 +32,24 @@ class CursoController {
         $id_usuario = isset($_SESSION['id_usuario']) ? (int)$_SESSION['id_usuario'] : 0;
         $busqueda = isset($_GET['buscar']) ? trim($_GET['buscar']) : '';
         $etiqueta_filtro = isset($_GET['etiqueta']) ? (int)$_GET['etiqueta'] : 0;
+        $acceso_filtro = isset($_GET['acceso']) ? trim($_GET['acceso']) : '';
 
-        $resultado_cursos = $this->cursoModel->obtenerCursosActivos($id_usuario, $busqueda, $etiqueta_filtro);
+        $resultado_cursos = $this->cursoModel->obtenerCursosActivos($id_usuario, $busqueda, $etiqueta_filtro, $acceso_filtro);
         $etiquetas_filtro = $this->cursoModel->obtenerTodasLasEtiquetas();
         $inscripciones = [];
+        $limite_inscripciones = false;
         $no_leidas = 0;
         $result_noti = null;
 
         if ($id_usuario > 0) {
             $inscripciones = $this->cursoModel->obtenerEstadosInscripcionesUsuario($id_usuario);
+            $es_pro = $this->cursoModel->esUsuarioPro($id_usuario);
+            $_SESSION['plan_pro'] = $es_pro;
+
+            if ($es_pro == 0 && $this->cursoModel->contarInscripcionesActivasUsuario($id_usuario) >= 3) {
+                $limite_inscripciones = true;
+            }
+
             $notis = $this->cargarNotificaciones();
             $no_leidas = $notis['no_leidas'];
             $result_noti = $notis['result_noti'];
@@ -239,6 +248,8 @@ class CursoController {
             header("Location: index.php?exito=1");
         } elseif ($resultado === 'pendiente') {
             header("Location: index.php?pendiente=1");
+        } elseif ($resultado === 'limite_pro') {
+            header("Location: index.php?error=limite_pro");
         } elseif ($resultado === 'lleno') {
             header("Location: index.php?error=lleno");
         } else {

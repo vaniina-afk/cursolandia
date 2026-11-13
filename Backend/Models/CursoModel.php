@@ -7,20 +7,27 @@ class CursoModel {
     }
 
     // --- MÉTODOS PARA EL CATÁLOGO (INICIO) ---
-    public function obtenerCursosActivos($id_usuario = 0, $busqueda = '', $id_etiqueta = 0) {
-        $sql = "SELECT c.*, u.nombre, u.apellido, (u.plan_pro = 1 AND (u.vencimiento_pro IS NULL OR u.vencimiento_pro >= CURDATE())) AS pro_vigente,
+    public function obtenerCursosActivos($id_usuario = 0, $busqueda = '', $id_etiqueta = 0, $acceso = '') {
+        $sql = "SELECT c.*, u.nombre, u.apellido,
+                       (u.plan_pro = 1 AND (u.vencimiento_pro IS NULL OR u.vencimiento_pro >= CURDATE())) AS pro_vigente,
                        GROUP_CONCAT(DISTINCT e.nombre ORDER BY e.nombre SEPARATOR ', ') AS lista_etiquetas,
-                       COUNT(DISTINCT ui.id_interes) AS coincidencias_interes
+                       COUNT(DISTINCT ui.id_interes) AS coincidencias_interes,
+                       CASE
+                           WHEN MAX(CASE WHEN i_user.estado IN ('Aceptado', 'Pendiente') THEN 1 ELSE 0 END) = 1 THEN 2
+                           WHEN c.cupo IS NOT NULL AND c.cupo <= 0 THEN 3
+                           ELSE 1
+                       END AS orden_catalogo
                 FROM Cursos c
                 JOIN Usuarios u ON c.id_creador = u.id_usuario
+                LEFT JOIN Inscripciones i_user ON c.id_curso = i_user.id_curso AND i_user.id_usuario = ?
                 LEFT JOIN curso_etiqueta ce ON c.id_curso = ce.id_curso
                 LEFT JOIN etiquetas e ON ce.id_etiqueta = e.id_etiqueta
                 LEFT JOIN intereses i ON LOWER(TRIM(e.nombre)) = LOWER(TRIM(i.nombre))
                 LEFT JOIN usuario_interes ui ON i.id_interes = ui.id_interes AND ui.id_usuario = ?
                 WHERE c.activo = 1";
 
-        $tipos = "i";
-        $params = [$id_usuario];
+        $tipos = "ii";
+        $params = [$id_usuario, $id_usuario];
 
         if ($busqueda !== '') {
             $sql .= " AND c.titulo LIKE ?";
@@ -37,8 +44,14 @@ class CursoModel {
             $params[] = $id_etiqueta;
         }
 
+        if ($acceso === 'publico') {
+            $sql .= " AND c.es_privado = 0";
+        } elseif ($acceso === 'privado') {
+            $sql .= " AND c.es_privado = 1";
+        }
+
         $sql .= " GROUP BY c.id_curso
-                  ORDER BY pro_vigente DESC, coincidencias_interes DESC, c.id_curso DESC";
+                  ORDER BY orden_catalogo ASC, pro_vigente DESC, coincidencias_interes DESC, c.id_curso DESC";
 
         $stmt = $this->conexion->prepare($sql);
         $stmt->bind_param($tipos, ...$params);
@@ -176,6 +189,21 @@ class CursoModel {
 
     // --- MÉTODOS PARA INSCRIPCIONES Y BAJAS ---
 
+    public function contarInscripcionesActivasUsuario($id_usuario) {
+        $stmt = $this->conexion->prepare("SELECT COUNT(*) as total 
+                                          FROM Inscripciones i 
+                                          JOIN Cursos c ON i.id_curso = c.id_curso 
+                                          WHERE i.id_usuario = ? 
+                                            AND c.activo = 1 
+                                            AND i.estado IN ('Aceptado', 'Pendiente')");
+        $stmt->bind_param("i", $id_usuario);
+        $stmt->execute();
+        $total = (int)$stmt->get_result()->fetch_assoc()['total'];
+        $stmt->close();
+
+        return $total;
+    }
+
     public function inscribirUsuario($id_curso, $id_usuario) {
         // 1. Verificar si ya existe una inscripción o solicitud previa
         $stmt_check = $this->conexion->prepare("SELECT id_inscripcion FROM Inscripciones WHERE id_curso = ? AND id_usuario = ?");
@@ -187,7 +215,12 @@ class CursoModel {
         }
         $stmt_check->close();
 
-        // 2. Obtener datos del curso (cupo, costo, es_privado, creador, título)
+        // 2. Verificar límite de 3 cursos activos para usuarios gratuitos (no PRO)
+        if ($this->esUsuarioPro($id_usuario) == 0 && $this->contarInscripcionesActivasUsuario($id_usuario) >= 3) {
+            return 'limite_pro';
+        }
+
+        // 3. Obtener datos del curso (cupo, costo, es_privado, creador, título)
         $stmt_curso = $this->conexion->prepare("SELECT titulo, id_creador, costo, cupo, es_privado FROM Cursos WHERE id_curso = ? AND activo = 1");
         $stmt_curso->bind_param("i", $id_curso);
         $stmt_curso->execute();
@@ -200,7 +233,7 @@ class CursoModel {
 
         $requiere_aprobacion = ((int)$curso_data['es_privado'] === 1 || ($curso_data['costo'] !== null && (float)$curso_data['costo'] > 0));
 
-        // 3A. Si es privado o pago: queda en estado 'Pendiente' y se notifica al creador
+        // 4A. Si es privado o pago: queda en estado 'Pendiente' y se notifica al creador
         if ($requiere_aprobacion) {
             $stmt_ins = $this->conexion->prepare("INSERT INTO Inscripciones (id_curso, id_usuario, estado) VALUES (?, ?, 'Pendiente')");
             $stmt_ins->bind_param("ii", $id_curso, $id_usuario);
@@ -230,7 +263,7 @@ class CursoModel {
             return 'error';
         }
 
-        // 3B. Si es público y gratuito: inscripción directa 'Aceptado' con transacción ACID
+        // 4B. Si es público y gratuito: inscripción directa 'Aceptado' con transacción ACID
         $this->conexion->begin_transaction();
         try {
             $stmt_ins = $this->conexion->prepare("INSERT INTO Inscripciones (id_curso, id_usuario, estado) VALUES (?, ?, 'Aceptado')");
