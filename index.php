@@ -126,6 +126,11 @@ switch ($accion) {
         $foroController->eliminarRespuesta();
         break;
     
+    case 'editar_respuesta':
+        $foroController = new ForoController($conexion);
+        $foroController->editarRespuesta();
+        break;
+    
     case 'notificaciones':
         $notificacionController = new NotificacionController($conexion);
         $notificacionController->index();
