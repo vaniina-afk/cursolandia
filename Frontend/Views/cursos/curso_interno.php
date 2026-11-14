@@ -154,11 +154,15 @@ require_once __DIR__ . '/../layouts/navbar.php';
                                         <td class="border-0 border-bottom py-3">
                                             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                                                 <div class="d-flex align-items-center">
-                                                    <?php if (!empty($sol['imagen_perfil'])): ?>
-                                                        <img src="uploads/<?php echo htmlspecialchars($sol['imagen_perfil']); ?>" class="rounded-circle me-3 shadow-sm" style="width: 45px; height: 45px; object-fit: cover;" alt="Foto">
+                                                    <?php 
+                                                        $foto = $alumno['imagen_perfil'] ?? '';
+                                                        $ruta_foto = "Resources/uploads/" . $foto;
+                                                    ?>
+                                                    <?php if (!empty($foto) && $foto !== 'default.png' && file_exists($ruta_foto)): ?>
+                                                        <img src="<?php echo htmlspecialchars($ruta_foto); ?>" class="rounded-circle me-3 shadow-sm" style="width: 45px; height: 45px; object-fit: cover;" alt="Foto">
                                                     <?php else: ?>
                                                         <div class="text-white rounded-circle d-flex justify-content-center align-items-center me-3 shadow-sm" style="width: 45px; height: 45px; font-size: 1.2rem; font-weight: bold; background-color: var(--color-primario);">
-                                                            <?php echo strtoupper(substr($sol['nombre'], 0, 1)); ?>
+                                                            <?php echo strtoupper(substr($alumno['nombre'], 0, 1)); ?>
                                                         </div>
                                                     <?php endif; ?>
                                                     <div>
@@ -202,8 +206,12 @@ require_once __DIR__ . '/../layouts/navbar.php';
                                         <tr>
                                             <td class="border-0 border-bottom py-3">
                                                 <div class="d-flex align-items-center">
-                                                    <?php if (!empty($alumno['imagen_perfil'])): ?>
-                                                        <img src="uploads/<?php echo htmlspecialchars($alumno['imagen_perfil']); ?>" class="rounded-circle me-3 shadow-sm" style="width: 45px; height: 45px; object-fit: cover;" alt="Foto">
+                                                    <?php 
+                                                        $foto = $alumno['imagen_perfil'] ?? '';
+                                                        $ruta_foto = "Resources/uploads/" . $foto;
+                                                    ?>
+                                                    <?php if (!empty($foto) && $foto !== 'default.png' && file_exists($ruta_foto)): ?>
+                                                        <img src="<?php echo htmlspecialchars($ruta_foto); ?>" class="rounded-circle me-3 shadow-sm" style="width: 45px; height: 45px; object-fit: cover;" alt="Foto">
                                                     <?php else: ?>
                                                         <div class="text-white rounded-circle d-flex justify-content-center align-items-center me-3 shadow-sm" style="width: 45px; height: 45px; font-size: 1.2rem; font-weight: bold; background-color: var(--color-primario);">
                                                             <?php echo strtoupper(substr($alumno['nombre'], 0, 1)); ?>

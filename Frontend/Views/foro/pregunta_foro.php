@@ -28,8 +28,12 @@ require_once __DIR__ . '/../layouts/navbar.php';
                     </div>
                     
                     <div class="d-flex align-items-center mb-3">
-                        <?php if (!empty($pregunta['imagen_perfil'])): ?>
-                            <img src="uploads/<?php echo htmlspecialchars($pregunta['imagen_perfil']); ?>" class="rounded-circle me-2 shadow-sm" style="width: 45px; height: 45px; object-fit: cover;">
+                        <?php 
+                            $foto_preg = $pregunta['imagen_perfil'] ?? '';
+                            $ruta_foto_preg = "Resources/uploads/" . $foto_preg;
+                        ?>
+                        <?php if (!empty($foto_preg) && $foto_preg !== 'default.png' && file_exists($ruta_foto_preg)): ?>
+                            <img src="<?php echo htmlspecialchars($ruta_foto_preg); ?>" class="rounded-circle me-2 shadow-sm" style="width: 45px; height: 45px; object-fit: cover;" alt="Foto">
                         <?php else: ?>
                             <div class="text-white rounded-circle d-flex justify-content-center align-items-center me-2 shadow-sm" style="width: 45px; height: 45px; background-color: var(--color-primario); font-weight: bold; font-size: 1.2rem;">
                                 <?php echo strtoupper(substr($pregunta['nombre'], 0, 1)); ?>
