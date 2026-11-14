@@ -502,6 +502,21 @@ class CursoModel {
         return $exito;
     }
 
+    public function obtenerResumenMaterialesCurso($id_curso) {
+        $stmt = $this->conexion->prepare("SELECT COUNT(*) AS cantidad, COALESCE(SUM(tamanio_mb), 0) AS total_mb 
+                                          FROM Materiales 
+                                          WHERE id_curso = ?");
+        $stmt->bind_param("i", $id_curso);
+        $stmt->execute();
+        $fila = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        return [
+            'cantidad' => (int)$fila['cantidad'],
+            'total_mb' => (float)$fila['total_mb']
+        ];
+    }
+
     // --- MÉTODOS PARA ETIQUETAS DE CURSOS ---
 
     public function obtenerTodasLasEtiquetas() {

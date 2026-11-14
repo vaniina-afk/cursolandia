@@ -303,6 +303,9 @@ class CursoController {
         $result_noti = $notis['result_noti'];
 
         $materiales = $this->cursoModel->obtenerMaterialesPorCurso($id_curso);
+        $resumen_materiales = $this->cursoModel->obtenerResumenMaterialesCurso($id_curso);
+        $creador_es_pro = ($curso['id_creador'] == $id_usuario) ? ($this->cursoModel->esUsuarioPro($id_usuario) == 1) : false;
+
         $alumnos = ($curso['id_creador'] == $id_usuario) ? $this->cursoModel->obtenerAlumnosInscriptos($id_curso) : null;
         $solicitudes_pendientes = ($curso['id_creador'] == $id_usuario) ? $this->cursoModel->obtenerSolicitudesPendientesCurso($id_curso) : null;
         $preguntas_foro = $this->cursoModel->obtenerPreguntasForoPorCurso($id_curso);
@@ -318,27 +321,54 @@ class CursoController {
         }
 
         $id_usuario = (int)$_SESSION['id_usuario'];
-        $id_curso = (int)$_POST['id_curso'];
-        $nombre_archivo = trim($_POST['nombre_archivo']);
+        $id_curso = isset($_POST['id_curso']) ? (int)$_POST['id_curso'] : (isset($_GET['id_curso']) ? (int)$_GET['id_curso'] : 0);
 
-        if (!$this->cursoModel->esCreadorCurso($id_curso, $id_usuario)) {
+        if ($id_curso <= 0 || !$this->cursoModel->esCreadorCurso($id_curso, $id_usuario)) {
             header("Location: index.php?accion=panel");
+            exit();
+        }
+
+        // Si el archivo supera post_max_size en php.ini, PHP vacía $_POST y $_FILES
+        if (empty($_POST) && empty($_FILES) && isset($_SERVER['CONTENT_LENGTH']) && (int)$_SERVER['CONTENT_LENGTH'] > 0) {
+            header("Location: index.php?accion=curso_interno&id=$id_curso&error=post_max");
             exit();
         }
 
         if (!isset($_FILES['archivo']) || $_FILES['archivo']['error'] !== UPLOAD_ERR_OK) {
             $cod = $_FILES['archivo']['error'] ?? 'sin_archivo';
-            header("Location: index.php?accion=curso_interno&id=$id_curso&error=subida_$cod");
+            if ($cod == UPLOAD_ERR_INI_SIZE || $cod == UPLOAD_ERR_FORM_SIZE) {
+                header("Location: index.php?accion=curso_interno&id=$id_curso&error=post_max");
+            } else {
+                header("Location: index.php?accion=curso_interno&id=$id_curso&error=subida_$cod");
+            }
             exit();
         }
 
+        $es_pro = ($this->cursoModel->esUsuarioPro($id_usuario) == 1);
+        $nombre_archivo = trim($_POST['nombre_archivo']);
         $tamanio_bytes = $_FILES['archivo']['size'];
-        if ($tamanio_bytes > 5242880) {
-            header("Location: index.php?accion=curso_interno&id=$id_curso&error=tamanio");
-            exit();
+        $tamanio_mb = round($tamanio_bytes / 1048576, 2);
+
+        // Restricciones exclusivas para usuarios de plan Gratuito
+        if (!$es_pro) {
+            if ($tamanio_bytes > 5242880) {
+                header("Location: index.php?accion=curso_interno&id=$id_curso&error=tamanio");
+                exit();
+            }
+
+            $resumen = $this->cursoModel->obtenerResumenMaterialesCurso($id_curso);
+
+            if ($resumen['cantidad'] >= 5) {
+                header("Location: index.php?accion=curso_interno&id=$id_curso&error=limite_archivos");
+                exit();
+            }
+
+            if (($resumen['total_mb'] + $tamanio_mb) > 10) {
+                header("Location: index.php?accion=curso_interno&id=$id_curso&error=limite_total");
+                exit();
+            }
         }
 
-        $tamanio_mb = round($tamanio_bytes / 1048576, 2);
         $extension = pathinfo($_FILES['archivo']['name'], PATHINFO_EXTENSION);
         $nombre_unico = "mat_" . $id_curso . "_" . time() . "_" . uniqid() . "." . $extension;
 

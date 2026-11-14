@@ -6,6 +6,11 @@ require_once __DIR__ . '/../layouts/navbar.php';
 /** @var mysqli_result|false $preguntas_foro */
 /** @var mysqli_result|false $alumnos */
 /** @var mysqli_result|false $solicitudes_pendientes */
+$cant_archivos = $resumen_materiales['cantidad'] ?? 0;
+$mb_usados = $resumen_materiales['total_mb'] ?? 0;
+$es_creador_curso = ($curso['id_creador'] == $id_usuario);
+$creador_pro = !empty($creador_es_pro);
+$cupo_material_lleno = ($es_creador_curso && !$creador_pro && ($cant_archivos >= 5 || $mb_usados >= 10));
 ?>
 
 <div class="container mb-5">
@@ -18,8 +23,14 @@ require_once __DIR__ . '/../layouts/navbar.php';
         <div class="alert alert-success text-center shadow-sm auto-ocultar mb-4">¡Alumno aceptado en el curso!</div>
     <?php elseif (isset($_GET['inscripcion']) && $_GET['inscripcion'] == 'rechazada'): ?>
         <div class="alert alert-secondary text-center shadow-sm auto-ocultar mb-4">Solicitud de inscripción rechazada.</div>
+    <?php elseif (isset($_GET['error']) && $_GET['error'] == 'post_max'): ?>
+        <div class="alert alert-danger text-center shadow-sm auto-ocultar mb-4">El archivo supera el tamaño máximo permitido por el servidor.</div>
     <?php elseif (isset($_GET['error']) && $_GET['error'] == 'tamanio'): ?>
-        <div class="alert alert-danger text-center shadow-sm mb-4">Error desde el servidor: El archivo supera el límite máximo de 5MB.</div>
+        <div class="alert alert-danger text-center shadow-sm mb-4">El archivo supera el límite individual de 5 MB permitido para cuentas gratuitas.</div>
+    <?php elseif (isset($_GET['error']) && $_GET['error'] == 'limite_archivos'): ?>
+        <div class="alert alert-warning text-center shadow-sm mb-4">Alcanzaste el límite de 5 archivos para cuentas gratuitas. <a href="index.php?accion=solicitar_pro" class="fw-bold text-primario">Pasate a PRO</a> para subir sin límites.</div>
+    <?php elseif (isset($_GET['error']) && $_GET['error'] == 'limite_total'): ?>
+        <div class="alert alert-warning text-center shadow-sm mb-4">Este archivo supera el espacio total de 10 MB permitido por curso en el plan gratuito. <a href="index.php?accion=solicitar_pro" class="fw-bold text-primario">Pasate a PRO</a> para ampliar tu almacenamiento.</div>
     <?php elseif (isset($_GET['error']) && $_GET['error'] == 'cupo_lleno'): ?>
         <div class="alert alert-danger text-center shadow-sm mb-4">No podés aceptar más alumnos porque el cupo del curso ya está completo.</div>
     <?php elseif (isset($_GET['error'])): ?>
@@ -50,27 +61,41 @@ require_once __DIR__ . '/../layouts/navbar.php';
         <div class="col-md-7">
             <div class="card card-compacta shadow-sm border-0 h-100">
                 <div class="card-body p-4">
-                    <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
-                        <h4 class="text-primario fw-bold mb-0">📚 Material de Estudio</h4>
-                        <?php if ($curso['id_creador'] == $id_usuario): ?>
-                            <button class="btn btn-sm btn-primario fw-bold" data-bs-toggle="modal" data-bs-target="#modalSubirMaterial">
-                                Subir Archivo
-                            </button>
+                    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 border-bottom pb-2 gap-2">
+                        <div>
+                            <h4 class="text-primario fw-bold mb-0">📚 Material de Estudio</h4>
+                            <?php if ($es_creador_curso): ?>
+                                <?php if ($creador_pro): ?>
+                                    <small class="text-success fw-semibold">⭐ Plan PRO: Almacenamiento y archivos ilimitados (<?php echo $cant_archivos; ?> subidos · <?php echo number_format($mb_usados, 2); ?> MB)</small>
+                                <?php else: ?>
+                                    <small class="text-muted">Cuota gratuita: <strong><?php echo $cant_archivos; ?>/5</strong> archivos · <strong><?php echo number_format($mb_usados, 2); ?>/10</strong> MB</small>
+                                <?php endif; ?>
+                            <?php endif; ?>
+                        </div>
+
+                        <?php if ($es_creador_curso): ?>
+                            <?php if ($cupo_material_lleno): ?>
+                                <a href="index.php?accion=solicitar_pro" class="btn btn-sm btn-outline-warning text-dark fw-bold">⭐ Límite alcanzado (Pasar a PRO)</a>
+                            <?php else: ?>
+                                <button class="btn btn-sm btn-primario fw-bold" data-bs-toggle="modal" data-bs-target="#modalSubirMaterial">
+                                    Subir Archivo
+                                </button>
+                            <?php endif; ?>
                         <?php endif; ?>
                     </div>
                     
                     <?php if ($materiales && $materiales->num_rows > 0): ?>
-                        <div class="list-group">
+                        <div class="list-group list-group-flush mt-2" style="max-height: 350px; overflow-y: auto;">
                             <?php while ($mat = $materiales->fetch_assoc()): ?>
                                 <div class="list-group-item d-flex justify-content-between align-items-center p-3 border-0 border-bottom">
-                                    <div>
+                                    <div class="pe-2">
                                         <h6 class="mb-0 fw-bold text-dark">📄 <?php echo htmlspecialchars($mat['nombre_archivo']); ?></h6>
                                         <small class="text-muted">Peso: <?php echo htmlspecialchars($mat['tamanio_mb']); ?> MB</small>
                                     </div>
-                                    <div>
+                                    <div class="text-nowrap">
                                         <a href="uploads/<?php echo htmlspecialchars($mat['ruta_archivo']); ?>" download class="btn btn-sm btn-outline-success fw-bold">Descargar</a>
                                         
-                                        <?php if ($curso['id_creador'] == $id_usuario): ?>
+                                        <?php if ($es_creador_curso): ?>
                                             <a href="index.php?accion=borrar_material&id_mat=<?php echo $mat['id_material']; ?>&id_curso=<?php echo $id_curso; ?>" 
                                                class="btn btn-sm btn-outline-danger fw-bold ms-1" 
                                                onclick="return confirm('¿Estás seguro de que querés borrar este material permanentemente?');">
@@ -140,7 +165,7 @@ require_once __DIR__ . '/../layouts/navbar.php';
     </div>
 
     <!-- Sección Solicitudes Pendientes (Solo visible para el creador) -->
-    <?php if ($curso['id_creador'] == $id_usuario && isset($solicitudes_pendientes) && $solicitudes_pendientes && $solicitudes_pendientes->num_rows > 0): ?>
+    <?php if ($es_creador_curso && isset($solicitudes_pendientes) && $solicitudes_pendientes && $solicitudes_pendientes->num_rows > 0): ?>
     <div class="row mt-4">
         <div class="col-12">
             <div class="card card-compacta shadow-sm border-warning border-2">
@@ -150,19 +175,19 @@ require_once __DIR__ . '/../layouts/navbar.php';
                         <table class="table table-hover align-middle mb-0">
                             <tbody>
                                 <?php while ($sol = $solicitudes_pendientes->fetch_assoc()): ?>
+                                    <?php 
+                                        $foto_sol = $sol['imagen_perfil'] ?? '';
+                                        $ruta_foto_sol = "Resources/uploads/" . $foto_sol;
+                                    ?>
                                     <tr>
                                         <td class="border-0 border-bottom py-3">
                                             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                                                 <div class="d-flex align-items-center">
-                                                    <?php 
-                                                        $foto = $alumno['imagen_perfil'] ?? '';
-                                                        $ruta_foto = "Resources/uploads/" . $foto;
-                                                    ?>
-                                                    <?php if (!empty($foto) && $foto !== 'default.png' && file_exists($ruta_foto)): ?>
-                                                        <img src="<?php echo htmlspecialchars($ruta_foto); ?>" class="rounded-circle me-3 shadow-sm" style="width: 45px; height: 45px; object-fit: cover;" alt="Foto">
+                                                    <?php if (!empty($foto_sol) && $foto_sol !== 'default.png' && file_exists($ruta_foto_sol)): ?>
+                                                        <img src="<?php echo htmlspecialchars($ruta_foto_sol); ?>" class="rounded-circle me-3 shadow-sm" style="width: 45px; height: 45px; object-fit: cover;" alt="Foto">
                                                     <?php else: ?>
                                                         <div class="text-white rounded-circle d-flex justify-content-center align-items-center me-3 shadow-sm" style="width: 45px; height: 45px; font-size: 1.2rem; font-weight: bold; background-color: var(--color-primario);">
-                                                            <?php echo strtoupper(substr($alumno['nombre'], 0, 1)); ?>
+                                                            <?php echo strtoupper(substr($sol['nombre'], 0, 1)); ?>
                                                         </div>
                                                     <?php endif; ?>
                                                     <div>
@@ -191,7 +216,7 @@ require_once __DIR__ . '/../layouts/navbar.php';
     <?php endif; ?>
 
     <!-- Sección Alumnos Inscriptos (Solo visible para el creador) -->
-    <?php if ($curso['id_creador'] == $id_usuario): ?>
+    <?php if ($es_creador_curso): ?>
     <div class="row mt-4">
         <div class="col-12">
             <div class="card card-compacta shadow-sm border-0">
@@ -203,13 +228,13 @@ require_once __DIR__ . '/../layouts/navbar.php';
                             <table class="table table-hover align-middle mb-0">
                                 <tbody>
                                     <?php while ($alumno = $alumnos->fetch_assoc()): ?>
+                                        <?php 
+                                            $foto = $alumno['imagen_perfil'] ?? '';
+                                            $ruta_foto = "Resources/uploads/" . $foto;
+                                        ?>
                                         <tr>
                                             <td class="border-0 border-bottom py-3">
                                                 <div class="d-flex align-items-center">
-                                                    <?php 
-                                                        $foto = $alumno['imagen_perfil'] ?? '';
-                                                        $ruta_foto = "Resources/uploads/" . $foto;
-                                                    ?>
                                                     <?php if (!empty($foto) && $foto !== 'default.png' && file_exists($ruta_foto)): ?>
                                                         <img src="<?php echo htmlspecialchars($ruta_foto); ?>" class="rounded-circle me-3 shadow-sm" style="width: 45px; height: 45px; object-fit: cover;" alt="Foto">
                                                     <?php else: ?>
@@ -245,7 +270,7 @@ require_once __DIR__ . '/../layouts/navbar.php';
 </div>
 
 <!-- Modal Subir Material (Solo creador) -->
-<?php if ($curso['id_creador'] == $id_usuario): ?>
+<?php if ($es_creador_curso): ?>
 <div class="modal fade" id="modalSubirMaterial" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -253,7 +278,7 @@ require_once __DIR__ . '/../layouts/navbar.php';
                 <h5 class="modal-title text-primario fw-bold">Subir Nuevo Material</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="index.php?accion=subir_material" method="POST" enctype="multipart/form-data">
+            <form action="index.php?accion=subir_material&id_curso=<?php echo $id_curso; ?>" method="POST" enctype="multipart/form-data">
                 <div class="modal-body">
                     <input type="hidden" name="id_curso" value="<?php echo $id_curso; ?>">
                     
@@ -263,10 +288,12 @@ require_once __DIR__ . '/../layouts/navbar.php';
                     </div>
                     
                     <div class="mb-3">
-                        <label class="form-label text-secondary fw-semibold small">Archivo (Máx. 5MB)</label>
+                        <label class="form-label text-secondary fw-semibold small">
+                            <?php echo $creador_pro ? 'Archivo (Plan PRO sin límite de tamaño)' : 'Archivo (Máx. 5 MB por archivo · Disponible: ' . number_format(max(0, 10 - $mb_usados), 2) . ' MB)'; ?>
+                        </label>
                         <input type="file" name="archivo" id="inputArchivo" class="form-control form-control-sm" required>
                         <div id="errorTamanio" class="text-danger small mt-1 d-none fw-bold">
-                            ⚠️ El archivo supera los 5MB permitidos. Elegí uno más liviano.
+                            ⚠️ El archivo supera el límite permitido para el plan gratuito.
                         </div>
                     </div>
                 </div>
@@ -314,15 +341,23 @@ require_once __DIR__ . '/../layouts/navbar.php';
         const inputArchivo = document.getElementById('inputArchivo');
         const btnSubir = document.getElementById('btnSubir');
         const errorTamanio = document.getElementById('errorTamanio');
+        const esPro = <?php echo $creador_pro ? 'true' : 'false'; ?>;
+        const mbDisponibles = <?php echo max(0, 10 - $mb_usados); ?>;
 
-        if (inputArchivo) {
+        if (inputArchivo && !esPro) {
             inputArchivo.addEventListener('change', function() {
                 if (this.files.length > 0) {
                     const fileSize = this.files[0].size; 
-                    const maxSize = 5 * 1024 * 1024; 
+                    const maxSize = 5 * 1024 * 1024;
+                    const fileMb = fileSize / 1048576;
 
                     if (fileSize > maxSize) {
                         btnSubir.disabled = true;
+                        errorTamanio.textContent = "⚠️ El archivo supera los 5 MB permitidos por archivo.";
+                        errorTamanio.classList.remove('d-none');
+                    } else if (fileMb > mbDisponibles) {
+                        btnSubir.disabled = true;
+                        errorTamanio.textContent = "⚠️ Este archivo supera el espacio total disponible (10 MB) en este curso.";
                         errorTamanio.classList.remove('d-none');
                     } else {
                         btnSubir.disabled = false;
