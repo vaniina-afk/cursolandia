@@ -8,6 +8,7 @@ $busqueda_actual = $_GET['buscar'] ?? '';
 $etiqueta_actual = isset($_GET['etiqueta']) ? (int)$_GET['etiqueta'] : 0;
 $acceso_actual = $_GET['acceso'] ?? '';
 $hay_filtros = ($busqueda_actual !== '' || $etiqueta_actual > 0 || $acceso_actual !== '');
+$hoy = date('Y-m-d');
 ?>
 
 <div class="container mb-4">
@@ -59,6 +60,10 @@ $hay_filtros = ($busqueda_actual !== '' || $etiqueta_actual > 0 || $acceso_actua
             <strong>¡Límite alcanzado!</strong> Con el plan Gratuito podés estar inscripto en un máximo de 3 cursos activos. 
             <a href="index.php?accion=solicitar_pro" class="fw-bold text-primario text-decoration-underline ms-1">Pasate a Plan PRO</a> para inscribirte sin límites.
         </div>
+    <?php elseif (isset($_GET['error']) && $_GET['error'] == 'no_iniciado'): ?>
+        <div class="alert alert-warning text-center shadow-sm auto-ocultar mb-4">Este curso todavía no inició su período de cursada.</div>
+    <?php elseif (isset($_GET['error']) && $_GET['error'] == 'finalizado'): ?>
+        <div class="alert alert-danger text-center shadow-sm auto-ocultar mb-4">Este curso ya finalizó su período activo.</div>
     <?php elseif (isset($_GET['error']) && $_GET['error'] == 'lleno'): ?>
         <div class="alert alert-danger text-center shadow-sm auto-ocultar mb-4">Lo sentimos, el cupo de este curso ya está lleno.</div>
     <?php elseif (isset($_GET['error']) && $_GET['error'] == 'admin'): ?>
@@ -82,10 +87,13 @@ $hay_filtros = ($busqueda_actual !== '' || $etiqueta_actual > 0 || $acceso_actua
                     $requiere_aprobacion = ($es_privado || $es_pago);
                     $estado_inscripcion = $inscripciones[(int)$curso['id_curso']] ?? null;
 
+                    $finalizado = ($curso['fecha_fin'] < $hoy);
                     $ya_inscripto = ($estado_inscripcion === 'Aceptado' || $estado_inscripcion === 'Pendiente');
-                    $sin_cupo = (!$ya_inscripto && $curso['cupo'] !== null && (int)$curso['cupo'] <= 0);
+                    $sin_cupo = (!$finalizado && !$ya_inscripto && $curso['cupo'] !== null && (int)$curso['cupo'] <= 0);
+                    $no_iniciado = (!$finalizado && $curso['fecha_inicio'] > $hoy);
+                    $deshabilitado_visual = ($finalizado || $sin_cupo);
 
-                    if ($sin_cupo) {
+                    if ($deshabilitado_visual) {
                         $card_clases = 'bg-light text-muted opacity-75 border';
                         $card_estilo = 'background-color: #f1f3f5;';
                     } elseif ($ya_inscripto) {
@@ -106,22 +114,28 @@ $hay_filtros = ($busqueda_actual !== '' || $etiqueta_actual > 0 || $acceso_actua
                             <!-- Fila de insignias: Precio, Acceso, PRO y Recomendado -->
                             <div class="mb-2 d-flex flex-wrap justify-content-between align-items-center gap-1">
                                 <div class="d-flex flex-wrap gap-1">
-                                    <span class="badge <?php echo $sin_cupo ? 'bg-secondary' : 'bg-success bg-opacity-75'; ?>">
+                                    <span class="badge <?php echo $deshabilitado_visual ? 'bg-secondary' : 'bg-success bg-opacity-75'; ?>">
                                         <?php echo $es_pago ? '$' . $curso['costo'] : 'Gratis'; ?>
                                     </span>
                                     <?php if ($es_privado): ?>
-                                        <span class="badge <?php echo $sin_cupo ? 'bg-secondary' : 'bg-dark'; ?>">🔒 Privado</span>
+                                        <span class="badge <?php echo $deshabilitado_visual ? 'bg-secondary' : 'bg-dark'; ?>">🔒 Privado</span>
                                     <?php else: ?>
                                         <span class="badge bg-light text-dark border">🌐 Público</span>
                                     <?php endif; ?>
                                 </div>
 
                                 <div class="d-flex flex-wrap gap-1">
-                                    <?php if ($sin_cupo): ?>
+                                    <?php if ($finalizado): ?>
+                                        <span class="badge bg-secondary">🏁 Finalizado</span>
+                                    <?php elseif ($sin_cupo): ?>
                                         <span class="badge bg-secondary">🚫 Sin cupos</span>
                                     <?php elseif ($ya_inscripto): ?>
                                         <span class="badge bg-info text-dark">
                                             <?php echo ($estado_inscripcion === 'Aceptado') ? '✅ Cursando' : '⏳ Pendiente'; ?>
+                                        </span>
+                                    <?php elseif ($no_iniciado): ?>
+                                        <span class="badge bg-warning text-dark">
+                                            📅 Inicia <?php echo date('d/m/Y', strtotime($curso['fecha_inicio'])); ?>
                                         </span>
                                     <?php else: ?>
                                         <?php if ($es_pro): ?>
@@ -139,7 +153,7 @@ $hay_filtros = ($busqueda_actual !== '' || $etiqueta_actual > 0 || $acceso_actua
                                 </div>
                             </div>
 
-                            <h5 class="card-title <?php echo $sin_cupo ? 'text-secondary' : 'text-primario'; ?> fw-bold">
+                            <h5 class="card-title <?php echo $deshabilitado_visual ? 'text-secondary' : 'text-primario'; ?> fw-bold">
                                 <?php echo htmlspecialchars($curso['titulo']); ?>
                             </h5>
                             
@@ -162,7 +176,7 @@ $hay_filtros = ($busqueda_actual !== '' || $etiqueta_actual > 0 || $acceso_actua
                             <?php endif; ?>
                             
                             <hr class="text-muted opacity-25">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
                                 <small class="text-muted fw-semibold">
                                     👨‍🏫 <?php echo htmlspecialchars($curso['nombre'] . ' ' . $curso['apellido']); ?>
                                 </small>
@@ -170,24 +184,37 @@ $hay_filtros = ($busqueda_actual !== '' || $etiqueta_actual > 0 || $acceso_actua
                                     Cupo: <?php echo ($curso['cupo'] !== null) ? $curso['cupo'] : 'Sin límite'; ?>
                                 </small>
                             </div>
+                            <div class="mb-3">
+                                <small class="text-muted" style="font-size: 0.75rem;">
+                                    📅 Del <?php echo date('d/m/Y', strtotime($curso['fecha_inicio'])); ?> al <?php echo date('d/m/Y', strtotime($curso['fecha_fin'])); ?>
+                                </small>
+                            </div>
 
                             <div class="mt-auto">
                                 <?php if (!isset($_SESSION['id_usuario'])): ?>
-                                    <a href="index.php?accion=login" class="btn btn-outline-secondary w-100 btn-sm fw-bold">Inicia sesión para inscribirte</a>
+                                    <?php if ($finalizado): ?>
+                                        <button class="btn btn-secondary w-100 btn-sm fw-bold" disabled>🏁 Curso Finalizado</button>
+                                    <?php else: ?>
+                                        <a href="index.php?accion=login" class="btn btn-outline-secondary w-100 btn-sm fw-bold">Inicia sesión para inscribirte</a>
+                                    <?php endif; ?>
                                 <?php elseif ($_SESSION['es_admin'] == 1): ?>
                                     <button class="btn btn-secondary w-100 btn-sm fw-bold" disabled>Modo Admin</button>
                                 <?php elseif ($_SESSION['id_usuario'] == $curso['id_creador']): ?>
                                     <button class="btn btn-light text-muted w-100 btn-sm fw-bold border" disabled>Sos el creador</button>
                                 <?php elseif ($estado_inscripcion === 'Aceptado'): ?>
-                                    <a href="index.php?accion=curso_interno&id=<?php echo $curso['id_curso']; ?>" class="btn btn-outline-success w-100 btn-sm fw-bold">Ir al Aula →</a>
+                                    <a href="index.php?accion=curso_interno&id=<?php echo $curso['id_curso']; ?>" class="btn <?php echo $finalizado ? 'btn-outline-secondary' : 'btn-outline-success'; ?> w-100 btn-sm fw-bold">Ir al Aula →</a>
+                                <?php elseif ($finalizado): ?>
+                                    <button class="btn btn-secondary w-100 btn-sm fw-bold" disabled>🏁 Curso Finalizado</button>
                                 <?php elseif ($estado_inscripcion === 'Pendiente'): ?>
                                     <button class="btn btn-warning text-dark w-100 btn-sm fw-bold" disabled>⏳ Solicitud pendiente</button>
                                 <?php elseif ($estado_inscripcion === 'Rechazado'): ?>
                                     <button class="btn btn-outline-danger w-100 btn-sm fw-bold" disabled>❌ Solicitud rechazada</button>
                                 <?php elseif ($sin_cupo): ?>
                                     <button class="btn btn-secondary w-100 btn-sm fw-bold" disabled>Cupo Lleno</button>
+                                <?php elseif ($no_iniciado): ?>
+                                    <button class="btn btn-outline-secondary w-100 btn-sm fw-bold" disabled>⏳ Inicia el <?php echo date('d/m/Y', strtotime($curso['fecha_inicio'])); ?></button>
                                 <?php elseif (!empty($limite_inscripciones)): ?>
-                                    <a href="index.php?accion=solicitar_pro" class="btn btn-outline-warning text-dark w-100 btn-sm fw-bold" title="Alcanzaste el máximo de 3 cursos del plan gratuito">⭐ Límite 3 cursos (Pasate a PRO)</a>
+                                    <a href="index.php?accion=solicitar_pro" class="btn btn-outline-warning text-dark w-100 btn-sm fw-bold" title="Alcanzaste el máximo de 3 cursos activos del plan gratuito">⭐ Límite 3 cursos (Pasate a PRO)</a>
                                 <?php else: ?>
                                     <form action="index.php?accion=inscribirse" method="POST">
                                         <input type="hidden" name="id_curso" value="<?php echo $curso['id_curso']; ?>">
@@ -206,7 +233,7 @@ $hay_filtros = ($busqueda_actual !== '' || $etiqueta_actual > 0 || $acceso_actua
                 <div class="alert alert-info text-center shadow-sm">
                     <?php echo $hay_filtros 
                         ? 'No se encontraron cursos que coincidan con tu búsqueda.' 
-                        : 'Aún no hay cursos publicados en la plataforma.'; ?>
+                        : 'Aún no hay cursos activos en la plataforma.'; ?>
                 </div>
             </div>
         <?php endif; ?>

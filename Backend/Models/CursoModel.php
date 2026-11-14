@@ -8,15 +8,12 @@ class CursoModel {
 
     // --- MÉTODOS PARA EL CATÁLOGO (INICIO) ---
     public function obtenerCursosActivos($id_usuario = 0, $busqueda = '', $id_etiqueta = 0, $acceso = '') {
+        $hoy = date('Y-m-d');
+
         $sql = "SELECT c.*, u.nombre, u.apellido,
-                       (u.plan_pro = 1 AND (u.vencimiento_pro IS NULL OR u.vencimiento_pro >= CURDATE())) AS pro_vigente,
+                       (u.plan_pro = 1 AND (u.vencimiento_pro IS NULL OR u.vencimiento_pro >= ?)) AS pro_vigente,
                        GROUP_CONCAT(DISTINCT e.nombre ORDER BY e.nombre SEPARATOR ', ') AS lista_etiquetas,
-                       COUNT(DISTINCT ui.id_interes) AS coincidencias_interes,
-                       CASE
-                           WHEN MAX(CASE WHEN i_user.estado IN ('Aceptado', 'Pendiente') THEN 1 ELSE 0 END) = 1 THEN 2
-                           WHEN c.cupo IS NOT NULL AND c.cupo <= 0 THEN 3
-                           ELSE 1
-                       END AS orden_catalogo
+                       COUNT(DISTINCT ui.id_interes) AS coincidencias_interes
                 FROM Cursos c
                 JOIN Usuarios u ON c.id_creador = u.id_usuario
                 LEFT JOIN Inscripciones i_user ON c.id_curso = i_user.id_curso AND i_user.id_usuario = ?
@@ -26,8 +23,8 @@ class CursoModel {
                 LEFT JOIN usuario_interes ui ON i.id_interes = ui.id_interes AND ui.id_usuario = ?
                 WHERE c.activo = 1";
 
-        $tipos = "ii";
-        $params = [$id_usuario, $id_usuario];
+        $tipos = "sii";
+        $params = [$hoy, $id_usuario, $id_usuario];
 
         if ($busqueda !== '') {
             $sql .= " AND c.titulo LIKE ?";
@@ -51,7 +48,17 @@ class CursoModel {
         }
 
         $sql .= " GROUP BY c.id_curso
-                  ORDER BY orden_catalogo ASC, pro_vigente DESC, coincidencias_interes DESC, c.id_curso DESC";
+                  ORDER BY (MIN(c.fecha_fin) < ?) ASC,
+                           (MAX(CASE WHEN i_user.estado IN ('Aceptado', 'Pendiente') THEN 1 ELSE 0 END) = 1) ASC,
+                           (MIN(c.cupo) IS NOT NULL AND MIN(c.cupo) <= 0) ASC,
+                           (MIN(c.fecha_inicio) > ?) ASC,
+                           pro_vigente DESC,
+                           coincidencias_interes DESC,
+                           c.id_curso DESC";
+
+        $tipos .= "ss";
+        $params[] = $hoy;
+        $params[] = $hoy;
 
         $stmt = $this->conexion->prepare($sql);
         $stmt->bind_param($tipos, ...$params);
@@ -80,7 +87,7 @@ class CursoModel {
     // --- MÉTODOS PARA EL PANEL ---
 
     public function obtenerCursosInscritosPorUsuario($id_usuario) {
-        $stmt = $this->conexion->prepare("SELECT c.id_curso, c.titulo, c.activo, i.estado, u.nombre, u.apellido 
+        $stmt = $this->conexion->prepare("SELECT c.id_curso, c.titulo, c.activo, c.fecha_inicio, c.fecha_fin, i.estado, u.nombre, u.apellido 
                                           FROM Inscripciones i 
                                           JOIN Cursos c ON i.id_curso = c.id_curso 
                                           JOIN Usuarios u ON c.id_creador = u.id_usuario 
@@ -95,7 +102,7 @@ class CursoModel {
     }
 
     public function obtenerCursosCreadosPorUsuario($id_usuario) {
-        $stmt = $this->conexion->prepare("SELECT c.id_curso, c.titulo, c.cupo, c.fecha_inicio, c.es_privado, c.costo,
+        $stmt = $this->conexion->prepare("SELECT c.id_curso, c.titulo, c.cupo, c.fecha_inicio, c.fecha_fin, c.es_privado, c.costo,
                                                  (SELECT COUNT(*) FROM Inscripciones i WHERE i.id_curso = c.id_curso AND i.estado = 'Pendiente') AS solicitudes_pendientes
                                           FROM Cursos c
                                           WHERE c.id_creador = ? AND c.activo = 1 
@@ -127,7 +134,9 @@ class CursoModel {
     }
 
     public function contarCursosActivosCreados($id_usuario) {
-        $stmt = $this->conexion->prepare("SELECT COUNT(*) as total FROM Cursos WHERE id_creador = ? AND activo = 1");
+        $stmt = $this->conexion->prepare("SELECT COUNT(*) as total 
+                                          FROM Cursos 
+                                          WHERE id_creador = ? AND activo = 1 AND fecha_fin >= CURDATE()");
         $stmt->bind_param("i", $id_usuario);
         $stmt->execute();
         $total = (int)$stmt->get_result()->fetch_assoc()['total'];
@@ -195,6 +204,7 @@ class CursoModel {
                                           JOIN Cursos c ON i.id_curso = c.id_curso 
                                           WHERE i.id_usuario = ? 
                                             AND c.activo = 1 
+                                            AND c.fecha_fin >= CURDATE()
                                             AND i.estado IN ('Aceptado', 'Pendiente')");
         $stmt->bind_param("i", $id_usuario);
         $stmt->execute();
@@ -220,14 +230,28 @@ class CursoModel {
             return 'limite_pro';
         }
 
-        // 3. Obtener datos del curso (cupo, costo, es_privado, creador, título)
-        $stmt_curso = $this->conexion->prepare("SELECT titulo, id_creador, costo, cupo, es_privado FROM Cursos WHERE id_curso = ? AND activo = 1");
+        // 3. Obtener datos del curso y validar vigencia de fechas y cupo
+        $stmt_curso = $this->conexion->prepare("SELECT titulo, id_creador, costo, cupo, es_privado, fecha_inicio, fecha_fin 
+                                                FROM Cursos 
+                                                WHERE id_curso = ? AND activo = 1");
         $stmt_curso->bind_param("i", $id_curso);
         $stmt_curso->execute();
         $curso_data = $stmt_curso->get_result()->fetch_assoc();
         $stmt_curso->close();
 
-        if (!$curso_data || ($curso_data['cupo'] !== null && $curso_data['cupo'] <= 0)) {
+        if (!$curso_data) {
+            return 'finalizado';
+        }
+
+        $hoy = date('Y-m-d');
+        if ($curso_data['fecha_fin'] < $hoy) {
+            return 'finalizado';
+        }
+        if ($curso_data['fecha_inicio'] > $hoy) {
+            return 'no_iniciado';
+        }
+
+        if ($curso_data['cupo'] !== null && $curso_data['cupo'] <= 0) {
             return 'lleno';
         }
 
@@ -302,7 +326,6 @@ class CursoModel {
         $stmt_del->execute();
         $stmt_del->close();
 
-        // Solo devolvemos el cupo si el alumno estaba Aceptado (las pendientes aún no ocupaban cupo)
         if ($fila['estado'] === 'Aceptado') {
             $stmt_cupo = $this->conexion->prepare("UPDATE Cursos SET cupo = cupo + 1 WHERE id_curso = ? AND cupo IS NOT NULL");
             $stmt_cupo->bind_param("i", $id_curso);
@@ -328,7 +351,6 @@ class CursoModel {
     }
 
     public function responderSolicitudInscripcion($id_inscripcion, $id_curso, $id_creador, $decision) {
-        // Verificar que el curso pertenezca al creador y traer datos de la solicitud
         $stmt_check = $this->conexion->prepare("SELECT c.titulo, c.cupo, i.id_usuario 
                                                 FROM Inscripciones i
                                                 JOIN Cursos c ON i.id_curso = c.id_curso
@@ -538,7 +560,6 @@ class CursoModel {
     }
 
     public function guardarEtiquetasCurso($id_curso, $ids_etiquetas = [], $nuevas_etiquetas_texto = '') {
-        // 1. Limpiamos asignaciones previas
         $stmt_del = $this->conexion->prepare("DELETE FROM curso_etiqueta WHERE id_curso = ?");
         $stmt_del->bind_param("i", $id_curso);
         $stmt_del->execute();
@@ -546,7 +567,6 @@ class CursoModel {
 
         $ids_finales = array_map('intval', $ids_etiquetas);
 
-        // 2. Si el profesor escribió etiquetas nuevas separadas por coma, las creamos si no existen
         if (trim($nuevas_etiquetas_texto) !== '') {
             $partes = explode(',', $nuevas_etiquetas_texto);
             foreach ($partes as $nombre_raw) {
@@ -572,7 +592,6 @@ class CursoModel {
             }
         }
 
-        // 3. Insertamos en la tabla intermedia curso_etiqueta sin duplicados
         $ids_finales = array_unique($ids_finales);
         if (!empty($ids_finales)) {
             $stmt_ce = $this->conexion->prepare("INSERT INTO curso_etiqueta (id_curso, id_etiqueta) VALUES (?, ?)");

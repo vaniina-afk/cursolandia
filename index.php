@@ -1,5 +1,6 @@
 <?php
 session_start();
+date_default_timezone_set('America/Argentina/Buenos_Aires');
 
 require_once __DIR__ . '/Backend/Config/conexion.php';
 require_once __DIR__ . '/Backend/Controllers/CursoController.php';

@@ -10,7 +10,6 @@ class CursoController {
         $this->cursoModel = new CursoModel($conexion);
     }
 
-    // Cargar notificaciones para la campanita desde el Modelo
     private function cargarNotificaciones() {
         if (isset($_SESSION['id_usuario'])) {
             require_once __DIR__ . '/../Models/NotificacionModel.php';
@@ -105,7 +104,7 @@ class CursoController {
         $puede_crear = true;
         if ($total_cursos >= 3 && $es_pro == 0) {
             $puede_crear = false;
-            $mensaje = "<div class='alert alert-warning p-3 mb-3 text-center shadow-sm'><strong>¡Límite alcanzado!</strong> Ya tenés 3 cursos publicados. Para publicar más, necesitás pasarte al plan PRO.</div>";
+            $mensaje = "<div class='alert alert-warning p-3 mb-3 text-center shadow-sm'><strong>¡Límite alcanzado!</strong> Ya tenés 3 cursos activos. Para publicar más, necesitás pasarte al plan PRO.</div>";
         }
 
         if ($_SERVER['REQUEST_METHOD'] == 'POST' && $puede_crear) {
@@ -119,6 +118,8 @@ class CursoController {
 
             if ($fecha_fin < $fecha_inicio) {
                 $mensaje = "<div class='alert alert-danger p-2 small mb-3'>La fecha de fin no puede ser anterior a la de inicio.</div>";
+            } elseif ($fecha_fin < date('Y-m-d')) {
+                $mensaje = "<div class='alert alert-danger p-2 small mb-3'>La fecha de fin no puede ser anterior a hoy.</div>";
             } else {
                 $id_curso_nuevo = $this->cursoModel->crearCurso($id_usuario, $titulo, $descripcion, $costo, $cupo, $fecha_inicio, $fecha_fin, $es_privado);
                 
@@ -131,7 +132,7 @@ class CursoController {
                     if ($total_cursos >= 3 && $es_pro == 0) {
                         $puede_crear = false;
                         $mensaje = "<div class='alert alert-success p-2 small mb-2 auto-ocultar'>¡Curso creado con éxito!</div>
-                                    <div class='alert alert-warning p-3 text-center shadow-sm'><strong>Has alcanzado el límite de 3 cursos.</strong> Pasate a PRO para seguir creando.</div>";
+                                    <div class='alert alert-warning p-3 text-center shadow-sm'><strong>Has alcanzado el límite de 3 cursos activos.</strong> Pasate a PRO para seguir creando.</div>";
                     } else {
                         $restantes = ($es_pro == 1) ? "ilimitados (Plan PRO)" : (3 - $total_cursos) . " cupos gratuitos";
                         $mensaje = "<div class='alert alert-success p-2 small mb-3 auto-ocultar'>¡Curso creado con éxito! Te quedan $restantes.</div>";
@@ -252,6 +253,10 @@ class CursoController {
             header("Location: index.php?error=limite_pro");
         } elseif ($resultado === 'lleno') {
             header("Location: index.php?error=lleno");
+        } elseif ($resultado === 'no_iniciado') {
+            header("Location: index.php?error=no_iniciado");
+        } elseif ($resultado === 'finalizado') {
+            header("Location: index.php?error=finalizado");
         } else {
             header("Location: index.php");
         }
@@ -328,7 +333,6 @@ class CursoController {
             exit();
         }
 
-        // Si el archivo supera post_max_size en php.ini, PHP vacía $_POST y $_FILES
         if (empty($_POST) && empty($_FILES) && isset($_SERVER['CONTENT_LENGTH']) && (int)$_SERVER['CONTENT_LENGTH'] > 0) {
             header("Location: index.php?accion=curso_interno&id=$id_curso&error=post_max");
             exit();
@@ -349,7 +353,6 @@ class CursoController {
         $tamanio_bytes = $_FILES['archivo']['size'];
         $tamanio_mb = round($tamanio_bytes / 1048576, 2);
 
-        // Restricciones exclusivas para usuarios de plan Gratuito
         if (!$es_pro) {
             if ($tamanio_bytes > 5242880) {
                 header("Location: index.php?accion=curso_interno&id=$id_curso&error=tamanio");

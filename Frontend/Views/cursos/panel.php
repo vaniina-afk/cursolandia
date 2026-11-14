@@ -4,6 +4,7 @@ require_once __DIR__ . '/../layouts/header.php';
 require_once __DIR__ . '/../layouts/navbar.php'; 
 /** @var mysqli_result|false $cursos_inscritos */
 /** @var mysqli_result|false $cursos_creados */
+$hoy = date('Y-m-d');
 ?>
 
 <div class="container mb-5">
@@ -32,12 +33,21 @@ require_once __DIR__ . '/../layouts/navbar.php';
             <?php if (isset($cursos_inscritos) && $cursos_inscritos && $cursos_inscritos->num_rows > 0): ?>
                 <div class="list-group shadow-sm">
                     <?php while ($curso = $cursos_inscritos->fetch_assoc()): ?>
-                        <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center p-3 border-0 border-bottom <?php echo $curso['activo'] == 0 ? 'bg-light opacity-75' : ''; ?>">
+                        <?php $curso_finalizado = (!empty($curso['fecha_fin']) && $curso['fecha_fin'] < $hoy); ?>
+                        <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center p-3 border-0 border-bottom <?php echo ($curso['activo'] == 0 || $curso_finalizado) ? 'bg-light opacity-75' : ''; ?>">
                             <div>
                                 <h6 class="mb-1 fw-bold <?php echo $curso['activo'] == 0 ? 'text-muted text-decoration-line-through' : 'text-dark'; ?>">
                                     <?php echo htmlspecialchars($curso['titulo']); ?>
+                                    <?php if ($curso['activo'] == 1 && $curso_finalizado): ?>
+                                        <span class="badge bg-secondary ms-1" style="font-size: 0.65rem;">🏁 Finalizado</span>
+                                    <?php endif; ?>
                                 </h6>
-                                <small class="text-muted">Prof: <?php echo htmlspecialchars($curso['nombre'] . ' ' . $curso['apellido']); ?></small>
+                                <small class="text-muted d-block">Prof: <?php echo htmlspecialchars($curso['nombre'] . ' ' . $curso['apellido']); ?></small>
+                                <?php if (!empty($curso['fecha_inicio']) && !empty($curso['fecha_fin'])): ?>
+                                    <small class="text-muted" style="font-size: 0.75rem;">
+                                        📅 <?php echo date("d/m/Y", strtotime($curso['fecha_inicio'])); ?> al <?php echo date("d/m/Y", strtotime($curso['fecha_fin'])); ?>
+                                    </small>
+                                <?php endif; ?>
 
                                 <?php if ($curso['activo'] == 0): ?>
                                     <br><small class="text-danger fw-semibold">El creador cerró este curso.</small>
@@ -53,7 +63,9 @@ require_once __DIR__ . '/../layouts/navbar.php';
                                 <?php else: ?>
                                     <div class="d-flex flex-column gap-1 text-end">
                                         <a href="index.php?accion=curso_interno&id=<?php echo $curso['id_curso']; ?>" class="btn btn-sm btn-acento fw-bold">Entrar</a>
-                                        <a href="index.php?accion=dejar_curso&id=<?php echo $curso['id_curso']; ?>" class="btn btn-sm btn-outline-danger fw-bold" style="font-size: 0.75rem;" onclick="return confirm('¿Seguro que querés abandonar este curso?');">Dejar curso</a>
+                                        <a href="index.php?accion=dejar_curso&id=<?php echo $curso['id_curso']; ?>" class="btn btn-sm btn-outline-danger fw-bold" style="font-size: 0.75rem;" onclick="return confirm('¿Seguro que querés abandonar este curso?');">
+                                            <?php echo $curso_finalizado ? 'Quitar de lista' : 'Dejar curso'; ?>
+                                        </a>
                                     </div>
                                 <?php endif; ?>
                             <?php else: ?>
@@ -79,12 +91,21 @@ require_once __DIR__ . '/../layouts/navbar.php';
             <?php if (isset($cursos_creados) && $cursos_creados && $cursos_creados->num_rows > 0): ?>
                 <div class="list-group shadow-sm">
                     <?php while ($creado = $cursos_creados->fetch_assoc()): ?>
-                        <div class="list-group-item p-3 border-0 border-bottom">
+                        <?php 
+                            $creado_finalizado = (!empty($creado['fecha_fin']) && $creado['fecha_fin'] < $hoy);
+                            $creado_proximo = (!empty($creado['fecha_inicio']) && $creado['fecha_inicio'] > $hoy);
+                        ?>
+                        <div class="list-group-item p-3 border-0 border-bottom <?php echo $creado_finalizado ? 'bg-light' : ''; ?>">
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <h6 class="mb-0 fw-bold text-dark">
                                     <?php echo htmlspecialchars($creado['titulo']); ?>
                                     <?php if ((int)($creado['es_privado'] ?? 0) === 1): ?>
                                         <span class="badge bg-dark ms-1" style="font-size: 0.65rem;">🔒 Privado</span>
+                                    <?php endif; ?>
+                                    <?php if ($creado_finalizado): ?>
+                                        <span class="badge bg-secondary ms-1" style="font-size: 0.65rem;">🏁 Finalizado</span>
+                                    <?php elseif ($creado_proximo): ?>
+                                        <span class="badge bg-warning text-dark ms-1" style="font-size: 0.65rem;">📅 Próximo</span>
                                     <?php endif; ?>
                                 </h6>
                                 <div class="d-flex gap-1">
@@ -97,7 +118,9 @@ require_once __DIR__ . '/../layouts/navbar.php';
                                 </div>
                             </div>
                             <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-muted">Inicio: <?php echo date("d/m/Y", strtotime($creado['fecha_inicio'])); ?></small>
+                                <small class="text-muted">
+                                    📅 <?php echo date("d/m/Y", strtotime($creado['fecha_inicio'])); ?> al <?php echo date("d/m/Y", strtotime($creado['fecha_fin'])); ?>
+                                </small>
                                 <div>
                                     <a href="index.php?accion=curso_interno&id=<?php echo $creado['id_curso']; ?>" class="btn btn-sm btn-outline-primary fw-bold" style="font-size: 0.75rem;">Ver Aula</a>
                                     <a href="index.php?accion=editar_curso&id=<?php echo $creado['id_curso']; ?>" class="btn btn-sm btn-outline-secondary fw-bold" style="font-size: 0.75rem;">Editar</a>
