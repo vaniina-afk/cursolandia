@@ -51,26 +51,33 @@ class UsuarioController {
                 $antecedentes = trim($_POST['antecedentes']);
                 $nueva_imagen = null;
 
-                if (isset($_FILES['imagen_perfil']) && $_FILES['imagen_perfil']['error'] == UPLOAD_ERR_OK) {
-                    $file_tmp = $_FILES['imagen_perfil']['tmp_name'];
-                    $file_ext = strtolower(pathinfo($_FILES['imagen_perfil']['name'], PATHINFO_EXTENSION));
-                    $permitidos = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+                if (isset($_FILES['imagen_perfil']) && $_FILES['imagen_perfil']['error'] !== UPLOAD_ERR_NO_FILE) {
+                    if ($_FILES['imagen_perfil']['error'] === UPLOAD_ERR_OK) {
+                        $file_tmp = $_FILES['imagen_perfil']['tmp_name'];
+                        $file_size = $_FILES['imagen_perfil']['size'];
+                        $file_ext = strtolower(pathinfo($_FILES['imagen_perfil']['name'], PATHINFO_EXTENSION));
+                        $permitidos = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
 
-                    if (in_array($file_ext, $permitidos)) {
-                        $nuevo_nombre = "perfil_" . $id_usuario . "_" . time() . "." . $file_ext;
-                        $carpeta_destino = __DIR__ . '/../../Resources/uploads/';
+                        if ($file_size > 2 * 1024 * 1024) {
+                            $mensaje_perfil = "<div class='alert alert-warning p-2 small mb-3 auto-ocultar'>La imagen supera el máximo recomendado de 2MB.</div>";
+                        } elseif (in_array($file_ext, $permitidos)) {
+                            $nuevo_nombre = "perfil_" . $id_usuario . "_" . time() . "." . $file_ext;
+                            $carpeta_destino = __DIR__ . '/../../Resources/uploads/';
 
-                        if (!is_dir($carpeta_destino)) {
-                            mkdir($carpeta_destino, 0777, true);
-                        }
+                            if (!is_dir($carpeta_destino)) {
+                                mkdir($carpeta_destino, 0777, true);
+                            }
 
-                        if (move_uploaded_file($file_tmp, $carpeta_destino . $nuevo_nombre)) {
-                            $nueva_imagen = $nuevo_nombre;
+                            if (move_uploaded_file($file_tmp, $carpeta_destino . $nuevo_nombre)) {
+                                $nueva_imagen = $nuevo_nombre;
+                            } else {
+                                $mensaje_perfil = "<div class='alert alert-warning p-2 small mb-3 auto-ocultar'>No se pudo guardar la imagen. Verificá los permisos de Resources/uploads.</div>";
+                            }
                         } else {
-                            $mensaje_perfil = "<div class='alert alert-warning p-2 small mb-3 auto-ocultar'>No se pudo guardar la imagen. Verificá los permisos de Resources/uploads.</div>";
+                            $mensaje_perfil = "<div class='alert alert-danger p-2 small mb-3 auto-ocultar'>Formato de imagen no permitido. Usá JPG, PNG, GIF o WEBP.</div>";
                         }
                     } else {
-                        $mensaje_perfil = "<div class='alert alert-danger p-2 small mb-3 auto-ocultar'>Formato de imagen no permitido. Usá JPG, PNG o GIF.</div>";
+                        $mensaje_perfil = "<div class='alert alert-warning p-2 small mb-3 auto-ocultar'>No se pudo subir la imagen (verificá que pese menos de 2MB).</div>";
                     }
                 }
 

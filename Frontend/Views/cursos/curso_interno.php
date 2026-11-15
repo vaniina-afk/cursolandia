@@ -46,7 +46,7 @@ $cupo_material_lleno = ($es_creador_curso && !$creador_pro && ($cant_archivos >=
         <div class="card-body p-4">
             <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
                 <a href="index.php?accion=panel" class="btn btn-outline-secondary btn-sm fw-semibold">← Volver al Panel</a>
-                <span class="badge bg-acento fs-6">
+                <span class="badge bg-light text-dark border fs-6">
                     📅 <?php echo date("d/m/Y", strtotime($curso['fecha_inicio'])); ?> al <?php echo date("d/m/Y", strtotime($curso['fecha_fin'])); ?>
                 </span>
             </div>

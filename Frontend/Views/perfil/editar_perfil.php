@@ -2,6 +2,8 @@
 $titulo_pagina = "Editar Perfil";
 require_once __DIR__ . '/../layouts/header.php'; 
 require_once __DIR__ . '/../layouts/navbar.php'; 
+$foto_perfil = $datos_usuario['imagen_perfil'] ?? '';
+$ruta_foto_perfil = "Resources/uploads/" . $foto_perfil;
 ?>
 
 <div class="container mb-5">
@@ -43,8 +45,8 @@ require_once __DIR__ . '/../layouts/navbar.php';
                         <input type="hidden" name="actualizar_datos" value="1">
                         
                         <div class="d-flex align-items-center mb-4 p-3 bg-light rounded">
-                            <?php if (!empty($datos_usuario['imagen_perfil'])): ?>
-                                <img src="Resources/uploads/<?php echo htmlspecialchars($datos_usuario['imagen_perfil']); ?>" class="rounded-circle me-3 shadow-sm border" style="width: 70px; height: 70px; object-fit: cover;">
+                            <?php if (!empty($foto_perfil) && $foto_perfil !== 'default.png' && file_exists($ruta_foto_perfil)): ?>
+                                <img src="<?php echo htmlspecialchars($ruta_foto_perfil); ?>" class="rounded-circle me-3 shadow-sm border" style="width: 70px; height: 70px; object-fit: cover;" alt="Foto de perfil">
                             <?php else: ?>
                                 <div class="text-white rounded-circle d-flex justify-content-center align-items-center me-3 shadow-sm" style="width: 70px; height: 70px; background-color: var(--color-primario); font-weight: bold; font-size: 1.5rem;">
                                     <?php echo strtoupper(substr($datos_usuario['nombre'], 0, 1)); ?>
