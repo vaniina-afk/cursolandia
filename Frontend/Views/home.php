@@ -7,7 +7,8 @@ require_once __DIR__ . '/layouts/navbar.php';
 $busqueda_actual = $_GET['buscar'] ?? '';
 $etiqueta_actual = isset($_GET['etiqueta']) ? (int)$_GET['etiqueta'] : 0;
 $acceso_actual = $_GET['acceso'] ?? '';
-$hay_filtros = ($busqueda_actual !== '' || $etiqueta_actual > 0 || $acceso_actual !== '');
+$precio_actual = $_GET['precio'] ?? '';
+$hay_filtros = ($busqueda_actual !== '' || $etiqueta_actual > 0 || $acceso_actual !== '' || $precio_actual !== '');
 $hoy = date('Y-m-d');
 ?>
 
@@ -16,9 +17,9 @@ $hoy = date('Y-m-d');
         <h1 class="display-5 fw-bold text-primario">Explorá nuestros cursos</h1>
         <p class="lead text-secondary mb-4">Anotate en las mejores clases o convertite en creador de contenido hoy mismo.</p>
 
-        <!-- BUSCADOR Y FILTROS POR ETIQUETAS Y ACCESO -->
+        <!-- BUSCADOR Y FILTROS POR ETIQUETAS, ACCESO Y PRECIO -->
         <form action="index.php" method="GET" class="row g-2 justify-content-center mt-2">
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <input type="text" name="buscar" class="form-control" placeholder="🔍 Buscar por título..." value="<?php echo htmlspecialchars($busqueda_actual); ?>">
             </div>
             <div class="col-md-3">
@@ -38,6 +39,13 @@ $hoy = date('Y-m-d');
                     <option value="">Todos los accesos</option>
                     <option value="publico" <?php echo ($acceso_actual === 'publico') ? 'selected' : ''; ?>>🌐 Públicos</option>
                     <option value="privado" <?php echo ($acceso_actual === 'privado') ? 'selected' : ''; ?>>🔒 Privados</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="precio" class="form-select">
+                    <option value="">Todos los precios</option>
+                    <option value="gratis" <?php echo ($precio_actual === 'gratis') ? 'selected' : ''; ?>>🆓 Gratis</option>
+                    <option value="pago" <?php echo ($precio_actual === 'pago') ? 'selected' : ''; ?>>💲 Pagos</option>
                 </select>
             </div>
             <div class="col-md-auto d-flex gap-2">

@@ -84,11 +84,21 @@ $puede_moderar_tema = ($es_creador || $es_autor_pregunta);
                         $es_autor_respuesta = ($id_usuario == $respuesta['id_usuario']); 
                         $es_respuesta_profesor = ($respuesta['id_usuario'] == $pregunta['id_creador']);
                         $fue_editada = ((int)($respuesta['editada'] ?? 0) === 1);
+                        $foto_resp = $respuesta['imagen_perfil'] ?? '';
+                        $ruta_foto_resp = "Resources/uploads/" . $foto_resp;
                         ?>
                         
                         <div class="card shadow-sm mb-1 <?php echo $respuesta['es_destacada'] ? 'border-warning border-2' : 'border-0'; ?>" <?php echo $respuesta['es_destacada'] ? 'style="background-color: #fffdf2;"' : ''; ?>>
                             <div class="card-body p-3">
                                 <div class="d-flex align-items-center mb-2">
+                                    <?php if (!empty($foto_resp) && $foto_resp !== 'default.png' && file_exists($ruta_foto_resp)): ?>
+                                        <img src="<?php echo htmlspecialchars($ruta_foto_resp); ?>" class="rounded-circle me-2 shadow-sm flex-shrink-0" style="width: 36px; height: 36px; object-fit: cover;" alt="Foto">
+                                    <?php else: ?>
+                                        <div class="text-white rounded-circle d-flex justify-content-center align-items-center me-2 shadow-sm flex-shrink-0" style="width: 36px; height: 36px; background-color: var(--color-primario); font-weight: bold; font-size: 0.95rem;">
+                                            <?php echo strtoupper(substr($respuesta['nombre'], 0, 1)); ?>
+                                        </div>
+                                    <?php endif; ?>
+
                                     <span class="fw-bold me-auto text-dark" style="font-size: 0.9rem;">
                                         <?php echo htmlspecialchars($respuesta['nombre'] . ' ' . $respuesta['apellido']); ?>
                                         

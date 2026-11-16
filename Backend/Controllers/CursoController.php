@@ -32,8 +32,9 @@ class CursoController {
         $busqueda = isset($_GET['buscar']) ? trim($_GET['buscar']) : '';
         $etiqueta_filtro = isset($_GET['etiqueta']) ? (int)$_GET['etiqueta'] : 0;
         $acceso_filtro = isset($_GET['acceso']) ? trim($_GET['acceso']) : '';
+        $precio_filtro = isset($_GET['precio']) ? trim($_GET['precio']) : '';
 
-        $resultado_cursos = $this->cursoModel->obtenerCursosActivos($id_usuario, $busqueda, $etiqueta_filtro, $acceso_filtro);
+        $resultado_cursos = $this->cursoModel->obtenerCursosActivos($id_usuario, $busqueda, $etiqueta_filtro, $acceso_filtro, $precio_filtro);
         $etiquetas_filtro = $this->cursoModel->obtenerTodasLasEtiquetas();
         $inscripciones = [];
         $limite_inscripciones = false;

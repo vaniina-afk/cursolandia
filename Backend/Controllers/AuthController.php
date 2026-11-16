@@ -80,6 +80,13 @@ class AuthController {
                 }
 
                 if ($this->usuarioModel->registrar($nombre, $apellido, $email, $contrasena_hash, $antecedentes, $imagen_perfil)) {
+                    $usuario_creado = $this->usuarioModel->obtenerPorEmail($email);
+                    if ($usuario_creado) {
+                        $ids_intereses = $_POST['intereses'] ?? [];
+                        $nuevos_intereses = $_POST['nuevos_intereses'] ?? '';
+                        $this->usuarioModel->guardarInteresesUsuario((int)$usuario_creado['id_usuario'], $ids_intereses, $nuevos_intereses);
+                    }
+
                     $mensaje = "<div class='alert alert-success p-2 small mb-3'>¡Registro exitoso! Ya puedes <a href='index.php?accion=login' class='fw-bold text-success'>iniciar sesión</a>.</div>";
                 } else {
                     $mensaje = "<div class='alert alert-danger p-2 small mb-3'>Ocurrió un error al registrar la cuenta.</div>";
@@ -87,6 +94,7 @@ class AuthController {
             }
         }
 
+        $intereses_disponibles = $this->usuarioModel->obtenerTodosLosIntereses();
         require_once __DIR__ . '/../../Frontend/views/auth/registro.php';
     }
 

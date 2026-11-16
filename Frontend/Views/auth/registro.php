@@ -1,6 +1,7 @@
 <?php 
 $titulo_pagina = "Registro";
 require_once __DIR__ . '/../layouts/header.php'; 
+/** @var mysqli_result|false $intereses_disponibles */
 ?>
 
 <div class="container mt-4 mb-4">
@@ -37,6 +38,25 @@ require_once __DIR__ . '/../layouts/header.php';
                         <div class="mb-2">
                             <label class="form-label text-secondary fw-semibold small mb-1">Antecedentes</label>
                             <textarea name="antecedentes" class="form-control form-control-sm" rows="2"></textarea>
+                        </div>
+
+                        <div class="mb-2">
+                            <label class="form-label text-secondary fw-semibold small mb-1">
+                                Intereses <span class="text-muted fw-normal">(Opcional · para recomendarte cursos)</span>
+                            </label>
+                            <?php if (isset($intereses_disponibles) && $intereses_disponibles instanceof mysqli_result && $intereses_disponibles->num_rows > 0): ?>
+                                <div class="d-flex flex-wrap gap-2 mb-2 p-2 border rounded bg-light" style="max-height: 110px; overflow-y: auto;">
+                                    <?php while ($int = $intereses_disponibles->fetch_assoc()): ?>
+                                        <div class="form-check m-0">
+                                            <input class="form-check-input" type="checkbox" name="intereses[]" value="<?php echo $int['id_interes']; ?>" id="reg_int_<?php echo $int['id_interes']; ?>">
+                                            <label class="form-check-label small" for="reg_int_<?php echo $int['id_interes']; ?>">
+                                                <?php echo htmlspecialchars($int['nombre']); ?>
+                                            </label>
+                                        </div>
+                                    <?php endwhile; ?>
+                                </div>
+                            <?php endif; ?>
+                            <input type="text" name="nuevos_intereses" class="form-control form-control-sm" placeholder="Otros intereses separados por coma (ej: PHP, Diseño)">
                         </div>
                         
                         <div class="mb-3">
